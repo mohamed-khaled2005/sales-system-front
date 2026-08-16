@@ -1,0 +1,163 @@
+@import "tailwindcss";
+
+:root {
+  --gold: #facc15;
+  --gold-light: #fde047;
+  --gold-dark: #eab308;
+  --gold-glow: rgba(250, 204, 21, 0.18);
+  --lime: #facc15;
+  --lime-strong: #fde047;
+  --ink: #0a0a0b;
+  --bg-primary: #0d0d0e;
+  --card-bg: #141415;
+  --card-bg-elevated: #1a1a1c;
+  --card-bg-subtle: #121213;
+  --card-border: rgba(255, 255, 255, 0.07);
+  --card-border-hover: rgba(255, 255, 255, 0.14);
+  --paper: #f4f4f1;
+  --muted: #8e8e93;
+  --line: rgba(255, 255, 255, 0.08);
+  --danger: #ef4444;
+  --warning: #f59e0b;
+  --cyan: #38bdf8;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--ink);
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: #0d0d0e;
+  color: #f4f4f5;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  text-rendering: optimizeLegibility;
+}
+
+button, input, textarea, select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+::selection {
+  background: var(--gold);
+  color: #000000;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #27272a;
+  border-radius: 99px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3f3f46;
+}
+
+.app-noise::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  opacity: 0.08;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.18'/%3E%3C/svg%3E");
+}
+
+.glass {
+  background: rgba(18, 18, 20, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(20px);
+}
+
+.panel {
+  background: #141415;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+}
+
+.panel-subtle {
+  background: #101011;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+}
+
+.panel-card {
+  background: #1a1a1c;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+}
+
+.panel-light {
+  background: #f1f1ee;
+  color: #121212;
+  border-radius: 20px;
+}
+
+.gold-glow {
+  box-shadow: 0 0 25px rgba(250, 204, 21, 0.15);
+  border: 1px solid rgba(250, 204, 21, 0.4) !important;
+}
+
+.gold-glow-subtle {
+  box-shadow: 0 0 15px rgba(250, 204, 21, 0.08);
+}
+
+.soft-grid {
+  background-image: linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.animate-enter {
+  animation: enter 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.995);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes pulse-ring {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(250, 204, 21, 0);
+  }
+}
+
+.pulse-ring {
+  animation: pulse-ring 2.2s infinite;
+}
+
+@media (max-width: 1024px) {
+  .desktop-only {
+    display: none !important;
+  }
+}
