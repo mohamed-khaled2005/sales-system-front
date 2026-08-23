@@ -43,15 +43,16 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { href: "/dashboard", label: "Home", icon: Home, roles: "all" },
-  { href: "/sales", label: "Closed Deals", icon: Handshake, roles: ["admin", "ceo", "sales", "quality"] },
-  { href: "/clients", label: "Packages & Offers", icon: Package, roles: ["admin", "ceo", "sales", "account_manager", "finance", "quality"] },
+  { href: "/sales", label: "Sales Pipeline", icon: Handshake, roles: ["admin", "ceo", "sales_leader", "sales", "quality"] },
+  { href: "/packages", label: "Sales Packages", icon: Package, roles: ["admin", "ceo", "sales_leader", "sales", "account_manager", "finance"] },
+  { href: "/clients", label: "Clients Portfolio", icon: Building2, roles: ["admin", "ceo", "sales_leader", "sales", "account_manager", "finance", "quality"] },
   { href: "/tasks", label: "Workspace & Tasks", icon: ClipboardList, roles: ["admin", "ceo", "account_manager", "content_creator", "designer", "video_editor", "art_director", "production", "quality"] },
   { href: "/approvals", label: "Approvals", icon: CheckCheck, roles: ["admin", "ceo", "account_manager", "art_director", "quality"] },
   { href: "/production", label: "Production & Shoots", icon: Camera, roles: ["admin", "ceo", "account_manager", "art_director", "production"] },
   { href: "/finance", label: "Finance & Bonuses", icon: Coins, roles: ["admin", "ceo", "finance", "designer", "content_creator", "video_editor"] },
   { href: "/quality", label: "Quality & Rating", icon: Gauge, roles: ["admin", "ceo", "quality", "art_director"] },
   { href: "/hr", label: "HR & Attendance", icon: Users, roles: ["admin", "ceo", "hr"] },
-  { href: "/team", label: "Team Members", icon: ShieldCheck, roles: ["admin", "ceo", "hr", "quality"] },
+  { href: "/team", label: "Team Members", icon: ShieldCheck, roles: ["admin", "ceo", "hr", "quality", "sales_leader"] },
 ];
 
 export function Sidebar() {

@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=Tajawal:wght@200;300;400;500;700;800;900&display=swap");
 @import "tailwindcss";
 
 :root {
@@ -20,6 +21,7 @@
   --danger: #ef4444;
   --warning: #f59e0b;
   --cyan: #38bdf8;
+  --font-family: "Tajawal", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 * {
@@ -29,6 +31,7 @@
 html {
   background: var(--ink);
   scroll-behavior: smooth;
+  font-family: var(--font-family);
 }
 
 body {
@@ -36,12 +39,14 @@ body {
   min-height: 100vh;
   background: #0d0d0e;
   color: #f4f4f5;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--font-family) !important;
   text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-button, input, textarea, select {
-  font: inherit;
+button, input, textarea, select, h1, h2, h3, h4, h5, h6, p, span, strong, a {
+  font-family: var(--font-family) !important;
 }
 
 button {

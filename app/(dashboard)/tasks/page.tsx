@@ -1,5 +1,6 @@
 "use client";
 
+import { useAuth } from "@/components/auth-provider";
 import { TaskDrawer } from "@/components/task-drawer";
 import { Avatar } from "@/components/ui/avatar";
 import { Field, inputClass, PrimaryButton, SecondaryButton, textareaClass } from "@/components/ui/form";
@@ -7,89 +8,99 @@ import { Modal } from "@/components/ui/modal";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { api } from "@/lib/api";
 import { mockClients, mockTasks } from "@/lib/mock-data";
-import type { Paginated, Task } from "@/lib/types";
+import type { Client, Paginated, Task, User } from "@/lib/types";
 import {
-  Bell,
+  AlertTriangle,
+  Award,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  ClipboardList,
   FileCode,
   FileImage,
   FileText,
   Filter,
   Folder,
   FolderPlus,
+  Layers,
+  Palette,
   Plus,
   RefreshCw,
+  RotateCcw,
   Search,
   Settings,
   Sparkles,
+  TrendingUp,
+  Video,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 export default function TasksPage() {
+  const { user } = useAuth();
   const [tasks, setTasks] = useState<Task[]>(mockTasks);
+  const [clients, setClients] = useState<Client[]>(mockClients);
+  const [team, setTeam] = useState<User[]>([]);
   const [selected, setSelected] = useState<Task | null>(null);
   const [search, setSearch] = useState("");
   const [refreshing, setRefreshing] = useState(false);
-  const [showDetailedAdd, setShowDetailedAdd] = useState(false);
+  const [newTaskOpen, setNewTaskOpen] = useState(false);
 
-  // Quick project input state
-  const [projectName, setProjectName] = useState("");
-  const [copywriting, setCopywriting] = useState("");
-  const [textInVisual, setTextInVisual] = useState("");
-  const [references, setReferences] = useState("");
-  const [selectedClient, setSelectedClient] = useState("Acme Corp");
+  // Filters
+  const [selectedCategory, setSelectedCategory] = useState<"all" | "carousel" | "design" | "branding" | "video">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "need_revision" | "in_progress" | "approved">("all");
 
-  async function load() {
+  async function loadData() {
     setRefreshing(true);
     try {
-      const res = await api<Paginated<Task>>("/tasks?per_page=100");
-      if (res?.data) setTasks(res.data);
+      const [tasksRes, clientsRes, usersRes] = await Promise.all([
+        api<Paginated<Task>>("/tasks?per_page=100"),
+        api<Paginated<Client>>("/clients?per_page=100"),
+        api<User[]>("/users"),
+      ]);
+      if (tasksRes?.data) setTasks(tasksRes.data);
+      if (clientsRes?.data) setClients(clientsRes.data);
+      if (usersRes) setTeam(usersRes);
     } catch {
       setTasks(mockTasks);
+      setClients(mockClients);
     } finally {
       setRefreshing(false);
     }
   }
 
   useEffect(() => {
-    load();
+    loadData();
   }, []);
 
-  function handleCreateQuickProject(e: React.FormEvent) {
+  async function handleCreateTask(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!projectName.trim()) {
-      toast.error("يرجى كتابة اسم المشروع");
-      return;
-    }
-
-    const newTask: Task = {
-      id: Date.now(),
-      title: projectName,
-      department: "design",
-      type: "design_project",
+    const fd = new FormData(e.currentTarget);
+    const payload = {
+      client_id: Number(fd.get("client_id")),
+      assigned_to: fd.get("assigned_to") ? Number(fd.get("assigned_to")) : undefined,
+      title: String(fd.get("title")),
+      department: String(fd.get("department") || "design"),
+      type: String(fd.get("type") || "design"),
+      priority: String(fd.get("priority") || "high"),
       status: "in_progress",
-      priority: "high",
-      client: {
-        id: 1,
-        name: selectedClient,
-        primary_color: "#facc15",
-        secondary_color: "#111",
-        status: "active",
-        health_score: 90,
-      },
-      objective: copywriting || "تنفيذ المشروع حسب المتطلبات المرفقة.",
-      deadline: new Date(Date.now() + 3 * 86400000).toISOString(),
+      objective: String(fd.get("objective") || ""),
+      buyer_persona: String(fd.get("buyer_persona") || ""),
+      platform: String(fd.get("platform") || "Instagram"),
+      deadline: fd.get("deadline") ? String(fd.get("deadline")) : undefined,
     };
 
-    setTasks((prev) => [newTask, ...prev]);
-    setProjectName("");
-    setCopywriting("");
-    setTextInVisual("");
-    setReferences("");
-    toast.success("تم إنشاء المشروع بنجاح");
+    try {
+      const created = await api<Task>("/tasks", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      setTasks((prev) => [created, ...prev]);
+      toast.success("تم إنشاء المهمة وإسنادها بنجاح");
+      setNewTaskOpen(false);
+    } catch {
+      toast.error("فشل إنشاء المهمة");
+    }
   }
 
   const updateTask = (updated: Task) => {
@@ -97,385 +108,302 @@ export default function TasksPage() {
     setSelected(updated);
   };
 
-  // Grouped task categories matching Screenshots 3 & 4
-  const accountManagerTasks = useMemo(() => {
-    return tasks
-      .filter((t) => ["waiting_review", "need_revision"].includes(t.status) || t.priority === "urgent")
-      .slice(0, 4);
-  }, [tasks]);
+  // Filter tasks
+  const filteredTasks = useMemo(() => {
+    return tasks.filter((t) => {
+      // Search
+      const matchSearch = (t.title + " " + (t.client?.name ?? "")).toLowerCase().includes(search.toLowerCase());
+      if (!matchSearch) return false;
 
-  const activeTasks = useMemo(() => {
-    return tasks
-      .filter((t) => ["in_progress", "draft", "brief_ready"].includes(t.status))
-      .slice(0, 6);
-  }, [tasks]);
+      // Category
+      if (selectedCategory !== "all") {
+        const typeStr = (t.type + " " + t.department + " " + t.title).toLowerCase();
+        if (selectedCategory === "carousel" && !typeStr.includes("carousel")) return false;
+        if (selectedCategory === "design" && !typeStr.includes("design") && !typeStr.includes("visual")) return false;
+        if (selectedCategory === "branding" && !typeStr.includes("brand") && !typeStr.includes("identity")) return false;
+        if (selectedCategory === "video" && !typeStr.includes("video") && !typeStr.includes("reel") && !typeStr.includes("edit")) return false;
+      }
 
-  const submittedTasks = useMemo(() => {
-    return tasks
-      .filter((t) => ["waiting_review", "account_review", "client_review"].includes(t.status))
-      .slice(0, 4);
-  }, [tasks]);
+      // Status
+      if (statusFilter === "need_revision" && t.status !== "need_revision") return false;
+      if (statusFilter === "in_progress" && !["in_progress", "brief_ready", "draft"].includes(t.status)) return false;
+      if (statusFilter === "approved" && !["art_approved", "client_approved", "published", "done"].includes(t.status)) return false;
 
-  const approvedTasks = useMemo(() => {
-    return tasks
-      .filter((t) => ["art_approved", "client_approved", "published", "done"].includes(t.status))
-      .slice(0, 4);
-  }, [tasks]);
+      return true;
+    });
+  }, [tasks, search, selectedCategory, statusFilter]);
+
+  // Real performance metrics
+  const completedCount = tasks.filter((t) => ["published", "done", "client_approved"].includes(t.status)).length;
+  const needRevisionCount = tasks.filter((t) => t.status === "need_revision").length;
+  const inProgressCount = tasks.filter((t) => ["in_progress", "waiting_review"].includes(t.status)).length;
+  const qualityRate = Math.min(100, Math.round(((completedCount) / (tasks.length || 1)) * 100));
 
   return (
     <div className="space-y-6 animate-enter">
-      {/* Top Header matching Screenshot 3 & 4 */}
+      {/* Top Search & Actions */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        {/* Search Bar */}
         <div className="relative flex-1 max-w-md">
           <Search className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-500" size={15} />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search tasks..."
+            placeholder="البحث في المهام والمشاريع..."
             className="h-10 w-full rounded-xl border border-white/8 bg-[#161618] pr-10 pl-3 text-xs text-zinc-200 placeholder:text-zinc-500 outline-none focus:border-[#facc15]/50"
           />
         </div>
 
-        {/* Action Controls */}
         <div className="flex items-center gap-2">
-          <button className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-white/10 bg-[#1a1a1c] px-3 text-xs font-medium text-zinc-300 hover:bg-white/5 transition">
-            <Filter size={13} className="text-[#facc15]" />
-            <span>Filter</span>
-          </button>
-
           <button
-            onClick={load}
+            onClick={loadData}
             title="Refresh"
-            className="grid h-9 w-9 place-items-center rounded-lg border border-white/10 bg-[#1a1a1c] text-zinc-300 hover:bg-white/5 transition"
+            className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-[#1a1a1c] text-zinc-300 hover:bg-white/5 transition"
           >
             <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
           </button>
 
-          <button
-            title="Notifications"
-            className="relative grid h-9 w-9 place-items-center rounded-lg border border-white/10 bg-[#1a1a1c] text-zinc-300 hover:bg-white/5 transition"
-          >
-            <Bell size={14} />
-            <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-rose-500 ring-2 ring-[#1a1a1c]" />
-          </button>
+          <PrimaryButton onClick={() => setNewTaskOpen(true)}>
+            <Plus size={15} /> إضافة مهمة / مشروع جديد
+          </PrimaryButton>
+        </div>
+      </div>
 
+      {/* Real Performance Summary Slider / Widget */}
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="panel bg-[#141415] border border-white/7 rounded-2xl p-4 flex items-center justify-between">
+          <div>
+            <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block">قيد التنفيذ والمراجعة</span>
+            <strong className="text-2xl font-black text-white block mt-1">{inProgressCount}</strong>
+            <span className="text-[10px] text-zinc-400 mt-0.5 block">مهام نشطة في الفريق</span>
+          </div>
+          <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#facc15]/15 text-[#facc15]">
+            <Sparkles size={20} />
+          </span>
+        </div>
+
+        <div className="panel bg-[#141415] border border-white/7 rounded-2xl p-4 flex items-center justify-between">
+          <div>
+            <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block">تحتاج تعديلات (Needs Revision)</span>
+            <strong className="text-2xl font-black text-rose-400 block mt-1">{needRevisionCount}</strong>
+            <span className="text-[10px] text-zinc-400 mt-0.5 block">عادت للمنفذ لتطبيق الملاحظات</span>
+          </div>
+          <span className="grid h-10 w-10 place-items-center rounded-xl bg-rose-500/15 text-rose-400">
+            <RotateCcw size={20} />
+          </span>
+        </div>
+
+        <div className="panel bg-[#141415] border border-white/7 rounded-2xl p-4 flex items-center justify-between">
+          <div>
+            <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block">الأعمال المعتمدة والمكتملة</span>
+            <strong className="text-2xl font-black text-emerald-400 block mt-1">{completedCount}</strong>
+            <span className="text-[10px] text-zinc-400 mt-0.5 block">اعتماد Art Director & Client</span>
+          </div>
+          <span className="grid h-10 w-10 place-items-center rounded-xl bg-emerald-500/15 text-emerald-400">
+            <CheckCircle2 size={20} />
+          </span>
+        </div>
+
+        <div className="panel bg-[#141415] border border-white/7 rounded-2xl p-4 flex items-center justify-between">
+          <div>
+            <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block">معدل الإنجاز والجودة</span>
+            <strong className="text-2xl font-black text-[#facc15] block mt-1">{qualityRate}%</strong>
+            <div className="mt-1 h-1.5 w-24 overflow-hidden rounded-full bg-white/10">
+              <div className="h-full bg-[#facc15] rounded-full" style={{ width: `${qualityRate}%` }} />
+            </div>
+          </div>
+          <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#facc15]/15 text-[#facc15]">
+            <Award size={20} />
+          </span>
+        </div>
+      </section>
+
+      {/* Category & Status Filter Tabs (Senior Designer & Team) */}
+      <div className="panel bg-[#141415] border border-white/7 rounded-2xl p-3 flex flex-wrap items-center justify-between gap-3">
+        {/* Category Pills */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-[11px] font-bold text-zinc-500 pl-2">القسم / التصنيف:</span>
+          {[
+            ["all", "الكل", Layers],
+            ["carousel", "كابشن وكاروسيل (Carousel)", FileText],
+            ["design", "تصاميم سوشيال (Design)", Palette],
+            ["branding", "هوية بصرية (Branding)", Sparkles],
+            ["video", "فيديو وريلز (Video/Reels)", Video],
+          ].map(([key, label, Icon]: any) => (
+            <button
+              key={key}
+              onClick={() => setSelectedCategory(key)}
+              className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition ${
+                selectedCategory === key
+                  ? "bg-[#facc15] text-black font-black"
+                  : "bg-[#1a1a1c] text-zinc-400 hover:text-white"
+              }`}
+            >
+              <Icon size={13} />
+              <span>{label}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Status Filters */}
+        <div className="flex flex-wrap items-center gap-1.5 border-t border-white/5 pt-2 sm:border-0 sm:pt-0">
+          <span className="text-[11px] font-bold text-zinc-500 pl-2">الحالة:</span>
           <button
-            title="Settings"
-            className="grid h-9 w-9 place-items-center rounded-lg border border-white/10 bg-[#1a1a1c] text-zinc-300 hover:bg-white/5 transition"
+            onClick={() => setStatusFilter("all")}
+            className={`rounded-lg px-2.5 py-1 text-xs font-bold transition ${
+              statusFilter === "all" ? "bg-white/20 text-white" : "text-zinc-400 hover:text-white"
+            }`}
           >
-            <Settings size={14} />
+            الكل ({tasks.length})
+          </button>
+          <button
+            onClick={() => setStatusFilter("need_revision")}
+            className={`rounded-lg px-2.5 py-1 text-xs font-bold transition ${
+              statusFilter === "need_revision" ? "bg-rose-500/20 text-rose-300 font-black" : "text-rose-400/70 hover:text-rose-300"
+            }`}
+          >
+            Needs Revision ({needRevisionCount})
+          </button>
+          <button
+            onClick={() => setStatusFilter("in_progress")}
+            className={`rounded-lg px-2.5 py-1 text-xs font-bold transition ${
+              statusFilter === "in_progress" ? "bg-[#facc15]/20 text-[#facc15] font-black" : "text-zinc-400 hover:text-white"
+            }`}
+          >
+            In Progress ({inProgressCount})
+          </button>
+          <button
+            onClick={() => setStatusFilter("approved")}
+            className={`rounded-lg px-2.5 py-1 text-xs font-bold transition ${
+              statusFilter === "approved" ? "bg-emerald-500/20 text-emerald-300 font-black" : "text-emerald-400/70 hover:text-emerald-300"
+            }`}
+          >
+            Approved ({completedCount})
           </button>
         </div>
       </div>
 
-      {/* Account Manager Tasks (Screenshot 4) */}
-      {accountManagerTasks.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="text-xs font-bold text-zinc-400">Account Manager Tasks</h2>
-          <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
-            {accountManagerTasks.map((t, idx) => (
-              <div
-                key={t.id}
-                onClick={() => setSelected(t)}
-                className="group cursor-pointer rounded-2xl border border-white/7 bg-[#161618] p-4 transition hover:-translate-y-0.5 hover:border-white/15 hover:bg-[#1a1a1d]"
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="grid h-8 w-8 place-items-center rounded-lg bg-white/5 text-zinc-400 group-hover:text-[#facc15] transition">
-                    <Folder size={16} />
-                  </div>
-                  <span className="rounded-full bg-[#facc15] px-2.5 py-0.5 text-[9px] font-black text-black">
-                    From AM
-                  </span>
-                </div>
-
-                <strong className="block text-sm font-bold text-white truncate">{t.title}</strong>
-                <p className="mt-1 text-[11px] text-zinc-400 truncate">
-                  {t.objective || `Review ${t.client?.name ?? "client"} comments`}
-                </p>
-
-                <div className="mt-4 flex items-center justify-between border-t border-white/5 pt-2.5 text-[10px] text-zinc-500">
-                  <span>{idx % 2 === 0 ? "Today" : "Yesterday"}</span>
-                  <span
-                    className={`h-2 w-2 rounded-full ${
-                      idx % 2 === 0 ? "bg-zinc-600" : "bg-[#facc15]"
-                    }`}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Projects Section (Add Project Form matching Screenshots 3 & 4) */}
-      <section className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xs font-bold text-zinc-400">Projects</h2>
-          <button
-            onClick={() => setShowDetailedAdd((v) => !v)}
-            className="text-[11px] font-medium text-[#facc15] hover:underline"
+      {/* Tasks Grid */}
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {filteredTasks.map((t) => (
+          <div
+            key={t.id}
+            onClick={() => setSelected(t)}
+            className="group cursor-pointer rounded-2xl border border-white/7 bg-[#161618] p-4.5 transition hover:-translate-y-1 hover:border-white/15 hover:bg-[#1a1a1d] flex flex-col justify-between"
           >
-            {showDetailedAdd ? "Simple View" : "Advanced Form"}
-          </button>
-        </div>
-
-        <div className="panel bg-[#141415] border border-white/7 rounded-2xl p-4">
-          {!showDetailedAdd ? (
-            /* Screenshot 3 style: Single line input */
-            <form onSubmit={handleCreateQuickProject} className="flex flex-col sm:flex-row items-center gap-3">
-              <div className="relative flex-1 w-full">
-                <input
-                  value={projectName}
-                  onChange={(e) => setProjectName(e.target.value)}
-                  placeholder="+ Enter new project name..."
-                  className="h-11 w-full rounded-xl border border-white/8 bg-[#1a1a1c] px-4 text-xs text-zinc-200 placeholder:text-zinc-500 outline-none focus:border-[#facc15]/50"
-                />
-              </div>
-              <button
-                type="submit"
-                className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#facc15] px-5 text-xs font-bold text-black transition hover:bg-[#fde047] active:scale-95"
-              >
-                <FolderPlus size={15} />
-                <span>Add Project</span>
-              </button>
-            </form>
-          ) : (
-            /* Screenshot 4 style: Add Content Project multi-fields */
-            <form onSubmit={handleCreateQuickProject} className="space-y-4">
-              <span className="block text-xs font-bold text-zinc-300">Add Content Project</span>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-                <div>
-                  <span className="block text-[9px] font-bold tracking-wider text-zinc-500 uppercase mb-1">
-                    COPYWRITING
-                  </span>
-                  <input
-                    value={copywriting}
-                    onChange={(e) => setCopywriting(e.target.value)}
-                    placeholder="Enter content copy..."
-                    className="h-9 w-full rounded-lg border border-white/8 bg-[#1a1a1c] px-3 text-xs text-zinc-200 outline-none focus:border-[#facc15]/50"
-                  />
-                </div>
-
-                <div>
-                  <span className="block text-[9px] font-bold tracking-wider text-zinc-500 uppercase mb-1">
-                    TEXT IN VISUAL
-                  </span>
-                  <input
-                    value={textInVisual}
-                    onChange={(e) => setTextInVisual(e.target.value)}
-                    placeholder="Text to appear in graphic..."
-                    className="h-9 w-full rounded-lg border border-white/8 bg-[#1a1a1c] px-3 text-xs text-zinc-200 outline-none focus:border-[#facc15]/50"
-                  />
-                </div>
-
-                <div>
-                  <span className="block text-[9px] font-bold tracking-wider text-zinc-500 uppercase mb-1">
-                    REFERENCES
-                  </span>
-                  <input
-                    value={references}
-                    onChange={(e) => setReferences(e.target.value)}
-                    placeholder="Links or notes..."
-                    className="h-9 w-full rounded-lg border border-white/8 bg-[#1a1a1c] px-3 text-xs text-zinc-200 outline-none focus:border-[#facc15]/50"
-                  />
-                </div>
-
-                <div>
-                  <span className="block text-[9px] font-bold tracking-wider text-zinc-500 uppercase mb-1">
-                    SELECT CLIENT
-                  </span>
-                  <select
-                    value={selectedClient}
-                    onChange={(e) => setSelectedClient(e.target.value)}
-                    className="h-9 w-full rounded-lg border border-white/8 bg-[#1a1a1c] px-3 text-xs text-zinc-200 outline-none focus:border-[#facc15]/50"
-                  >
-                    {mockClients.map((c) => (
-                      <option key={c.id} value={c.name}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <span className="block text-[9px] font-bold tracking-wider text-zinc-500 uppercase mb-1">
-                    PROJECT NAME
-                  </span>
-                  <input
-                    value={projectName}
-                    onChange={(e) => setProjectName(e.target.value)}
-                    placeholder="Enter project name..."
-                    className="h-9 w-full rounded-lg border border-white/8 bg-[#1a1a1c] px-3 text-xs text-zinc-200 outline-none focus:border-[#facc15]/50"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end pt-1">
-                <button
-                  type="submit"
-                  className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#facc15] px-4 text-xs font-bold text-black hover:bg-[#fde047] transition"
-                >
-                  <Plus size={14} />
-                  <span>Add Project</span>
-                </button>
-              </div>
-            </form>
-          )}
-        </div>
-      </section>
-
-      {/* Active Tasks Section matching Screenshots 3 & 4 */}
-      <section className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xs font-bold text-zinc-400">Active Tasks</h2>
-          <div className="flex items-center gap-1 text-zinc-500">
-            <button className="grid h-6 w-6 place-items-center rounded bg-white/5 hover:bg-white/10 hover:text-white transition">
-              <ChevronLeft size={14} />
-            </button>
-            <button className="grid h-6 w-6 place-items-center rounded bg-white/5 hover:bg-white/10 hover:text-white transition">
-              <ChevronRight size={14} />
-            </button>
-          </div>
-        </div>
-
-        <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
-          {activeTasks.map((t, idx) => {
-            const badges = ["High Priority", "In Progress", "Review", "Pending"];
-            const badgeLabel = badges[idx % badges.length];
-            const isHigh = badgeLabel === "High Priority";
-
-            return (
-              <div
-                key={t.id}
-                onClick={() => setSelected(t)}
-                className="group cursor-pointer rounded-2xl border border-white/7 bg-[#161618] p-4 transition hover:-translate-y-0.5 hover:border-white/15 hover:bg-[#1a1a1d]"
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="grid h-8 w-8 place-items-center rounded-lg bg-white/5 text-zinc-400 group-hover:text-[#facc15] transition">
-                    <Folder size={16} />
-                  </div>
-                  <span
-                    className={`rounded-full px-2.5 py-0.5 text-[9px] font-bold ${
-                      isHigh
-                        ? "bg-[#facc15] text-black font-black"
-                        : "bg-[#242428] text-zinc-300 border border-white/10"
-                    }`}
-                  >
-                    {badgeLabel}
-                  </span>
-                </div>
-
-                <strong className="block text-sm font-bold text-white truncate">{t.title}</strong>
-                <p className="mt-1 text-[11px] text-zinc-400 truncate">
-                  {t.client?.name ?? "Brand Identity Design"}
-                </p>
-
-                <div className="mt-4 flex items-center justify-between border-t border-white/5 pt-2.5 text-[10px] text-zinc-500">
-                  <span>{12 + idx * 2} Oct</span>
-                  <span
-                    className={`h-2.5 w-2.5 rounded-full ${
-                      idx % 2 === 0 ? "bg-[#facc15]" : "bg-zinc-600"
-                    }`}
-                  />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* Submitted for Review Section */}
-      <section className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xs font-bold text-zinc-400">Submitted for Review</h2>
-          <div className="flex items-center gap-1 text-zinc-500">
-            <button className="grid h-6 w-6 place-items-center rounded bg-white/5 hover:bg-white/10 hover:text-white transition">
-              <ChevronLeft size={14} />
-            </button>
-            <button className="grid h-6 w-6 place-items-center rounded bg-white/5 hover:bg-white/10 hover:text-white transition">
-              <ChevronRight size={14} />
-            </button>
-          </div>
-        </div>
-
-        <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
-          {submittedTasks.map((t, idx) => (
-            <div
-              key={t.id}
-              onClick={() => setSelected(t)}
-              className="group cursor-pointer rounded-2xl border border-white/7 bg-[#161618] p-4 transition hover:-translate-y-0.5 hover:border-white/15 hover:bg-[#1a1a1d]"
-            >
+            <div>
               <div className="flex items-start justify-between mb-3">
-                <div className="grid h-8 w-8 place-items-center rounded-lg bg-white/5 text-zinc-400 group-hover:text-[#facc15] transition">
-                  <Folder size={16} />
+                <div className="flex items-center gap-2">
+                  <span className="grid h-8 w-8 place-items-center rounded-lg bg-[#facc15]/15 text-[#facc15]">
+                    <Folder size={15} />
+                  </span>
+                  <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
+                    {t.department}
+                  </span>
                 </div>
-                <span className="rounded-full bg-[#242428] border border-white/10 px-2.5 py-0.5 text-[9px] font-bold text-zinc-300">
-                  Pending Review
-                </span>
+                <StatusBadge status={t.status} />
               </div>
 
-              <strong className="block text-sm font-bold text-white truncate">{t.title}</strong>
-              <p className="mt-1 text-[11px] text-zinc-400 truncate">
-                {t.client?.name ?? "E-commerce Platform"}
+              <strong className="block text-sm font-bold text-white leading-snug group-hover:text-[#facc15] transition">
+                {t.title}
+              </strong>
+              <p className="mt-1 text-[11px] text-zinc-400 line-clamp-2">
+                {t.client?.name} • {t.objective || "مهمة إبداعية معتمدة"}
               </p>
-
-              <div className="mt-4 flex items-center justify-between border-t border-white/5 pt-2.5 text-[10px] text-zinc-500">
-                <span>{20 + idx * 2} Oct</span>
-                <span className="text-zinc-500">
-                  {idx % 2 === 0 ? <FileImage size={14} /> : <FileText size={14} />}
-                </span>
-              </div>
             </div>
-          ))}
-        </div>
-      </section>
 
-      {/* Art Director Approvals Section */}
-      <section className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xs font-bold text-zinc-400">Art Director Approvals</h2>
-          <div className="flex items-center gap-1 text-zinc-500">
-            <button className="grid h-6 w-6 place-items-center rounded bg-white/5 hover:bg-white/10 hover:text-white transition">
-              <ChevronLeft size={14} />
-            </button>
-            <button className="grid h-6 w-6 place-items-center rounded bg-white/5 hover:bg-white/10 hover:text-white transition">
-              <ChevronRight size={14} />
-            </button>
+            <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between text-[10px] text-zinc-500">
+              <div className="flex items-center gap-1.5">
+                <Avatar name={t.assignee?.name || "Unassigned"} size="sm" />
+                <span className="text-zinc-300 font-medium">{t.assignee?.name || "غير مسند"}</span>
+              </div>
+              <span className="font-mono text-zinc-400">
+                {t.deadline ? new Date(t.deadline).toLocaleDateString("ar-EG") : "—"}
+              </span>
+            </div>
           </div>
-        </div>
+        ))}
 
-        <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
-          {approvedTasks.map((t, idx) => (
-            <div
-              key={t.id}
-              onClick={() => setSelected(t)}
-              className="group cursor-pointer rounded-2xl border border-white/7 bg-[#161618] p-4 transition hover:-translate-y-0.5 hover:border-white/15 hover:bg-[#1a1a1d]"
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div className="grid h-8 w-8 place-items-center rounded-lg bg-white/5 text-[#facc15] transition">
-                  <Folder size={16} />
-                </div>
-                <span className="rounded-full bg-[#facc15] px-2.5 py-0.5 text-[9px] font-black text-black">
-                  Approved
-                </span>
-              </div>
-
-              <strong className="block text-sm font-bold text-white truncate">{t.title}</strong>
-              <p className="mt-1 text-[11px] text-zinc-400 truncate">
-                {t.client?.name ?? "TechCorp Project"}
-              </p>
-
-              <div className="mt-4 flex items-center justify-between border-t border-white/5 pt-2.5 text-[10px] text-zinc-500">
-                <span>{idx === 0 ? "Yesterday" : "2 days ago"}</span>
-                <span className="text-[#facc15]">
-                  <CheckCircle2 size={15} />
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
+        {filteredTasks.length === 0 && (
+          <div className="col-span-full panel bg-[#141415] border border-white/7 rounded-2xl p-12 text-center text-xs text-zinc-500">
+            لا توجد مهام مطابقة لخيارات الفلترة الحالية.
+          </div>
+        )}
       </section>
+
+      {/* MODAL: ADD NEW TASK / PROJECT */}
+      <Modal open={newTaskOpen} onClose={() => setNewTaskOpen(false)} title="إضافة مهمة / مشروع جديد">
+        <form onSubmit={handleCreateTask} className="grid gap-4 md:grid-cols-2 text-right">
+          <Field label="عنوان المهمة" className="md:col-span-2">
+            <input name="title" required placeholder="مثال: تصاميم كاروسيل اليوم الوطني" className={inputClass} />
+          </Field>
+
+          <Field label="العميل">
+            <select name="client_id" required className={inputClass}>
+              {clients.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+
+          <Field label="المسؤول عن التنفيذ">
+            <select name="assigned_to" className={inputClass}>
+              <option value="">-- غير مسند حالياً --</option>
+              {team.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name} ({u.job_title || u.role})
+                </option>
+              ))}
+            </select>
+          </Field>
+
+          <Field label="القسم">
+            <select name="department" className={inputClass}>
+              <option value="design">التصميم (Design)</option>
+              <option value="content">صناعة المحتوى (Content)</option>
+              <option value="video">المونتاج والفيديو (Video)</option>
+              <option value="production">الإنتاج والتصوير (Production)</option>
+            </select>
+          </Field>
+
+          <Field label="نوع العمل">
+            <select name="type" className={inputClass}>
+              <option value="carousel">Carousel Post</option>
+              <option value="social_design">Social Media Graphic</option>
+              <option value="brand_visual">Brand Visual</option>
+              <option value="reel_edit">Short-form Reel Edit</option>
+              <option value="copywriting">Copywriting & Script</option>
+            </select>
+          </Field>
+
+          <Field label="الأولوية">
+            <select name="priority" className={inputClass}>
+              <option value="medium">متوسطة (Medium)</option>
+              <option value="high">عالية (High)</option>
+              <option value="urgent">عاجلة (Urgent)</option>
+              <option value="low">منخفضة (Low)</option>
+            </select>
+          </Field>
+
+          <Field label="الموعد النهائي (Deadline)">
+            <input name="deadline" type="datetime-local" className={inputClass} />
+          </Field>
+
+          <Field label="الهدف من المحتوى (Objective)" className="md:col-span-2">
+            <textarea name="objective" placeholder="ما هي الرسالة والهدف الإعلاني المطلوب تحقيقه؟..." className={textareaClass} />
+          </Field>
+
+          <div className="flex justify-end gap-2 md:col-span-2 pt-2">
+            <SecondaryButton type="button" onClick={() => setNewTaskOpen(false)}>
+              إلغاء
+            </SecondaryButton>
+            <PrimaryButton>
+              <Plus size={14} /> إنشاء المهمة
+            </PrimaryButton>
+          </div>
+        </form>
+      </Modal>
 
       {/* Task Drawer */}
       <TaskDrawer task={selected} onClose={() => setSelected(null)} onUpdated={updateTask} />

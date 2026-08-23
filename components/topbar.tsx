@@ -1,8 +1,8 @@
 "use client";
 
-import { Bell, CalendarDays, Filter, Plus, RefreshCw, Search, Sparkles } from "lucide-react";
+import { CalendarDays, Search } from "lucide-react";
 import { useAuth } from "./auth-provider";
-import { Avatar } from "./ui/avatar";
+import { NotificationCenter } from "./notification-center";
 import { useState } from "react";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
@@ -51,6 +51,9 @@ export function Topbar({
             />
           </div>
         )}
+
+        {/* Global Notification Center with Bell */}
+        <NotificationCenter />
 
         {action}
       </div>

@@ -2,7 +2,6 @@
 
 import { useAuth } from "@/components/auth-provider";
 import { Field, inputClass, PrimaryButton } from "@/components/ui/form";
-import { demoUsers } from "@/lib/mock-data";
 import { ArrowLeft, Check, Crown, Eye, EyeOff, LoaderCircle, ScanFace, ShieldCheck, Sparkles } from "lucide-react";
 import { FaceIdModal } from "@/components/face-id-modal";
 import { useState } from "react";
@@ -10,20 +9,25 @@ import { toast } from "sonner";
 
 export default function LoginPage() {
   const { login } = useAuth();
-  const [email, setEmail] = useState("sales@agency.local");
-  const [password, setPassword] = useState("password");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showFaceId, setShowFaceId] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (!email || !password) {
+      toast.error("يرجى إدخال البريد الإلكتروني وكلمة المرور");
+      return;
+    }
+
     setLoading(true);
     try {
       await login(email, password);
       toast.success("مرحبًا بك في مساحة العمل");
     } catch {
-      toast.error("بيانات الدخول غير صحيحة. استخدم password للحساب التجريبي.");
+      toast.error("بيانات الدخول غير صحيحة. يرجى التحقق والمحاولة مجددًا.");
     } finally {
       setLoading(false);
     }
@@ -35,7 +39,7 @@ export default function LoginPage() {
       <div className="absolute -left-40 -top-40 h-[450px] w-[450px] rounded-full bg-[#facc15]/10 blur-[130px] pointer-events-none" />
       <div className="absolute -bottom-40 -right-40 h-[450px] w-[450px] rounded-full bg-amber-500/8 blur-[140px] pointer-events-none" />
 
-      <div className="mx-auto grid min-h-[580px] w-full max-w-[1250px] overflow-hidden rounded-[28px] border border-white/8 bg-[#121214] shadow-2xl lg:grid-cols-[1.1fr_0.9fr]">
+      <div className="mx-auto grid min-h-[560px] w-full max-w-[1200px] overflow-hidden rounded-[28px] border border-white/8 bg-[#121214] shadow-2xl lg:grid-cols-[1.1fr_0.9fr]">
         {/* Left Side Presentation */}
         <section className="soft-grid relative hidden overflow-hidden p-10 lg:flex lg:flex-col lg:justify-between border-l border-white/5">
           <div className="flex items-center gap-3">
@@ -78,7 +82,7 @@ export default function LoginPage() {
           </div>
 
           <div className="text-[11px] text-zinc-500">
-            Powered by Next.js & Executive Design System • 2026
+            Powered by Enterprise Architecture • 2026
           </div>
         </section>
 
@@ -102,6 +106,7 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   type="email"
+                  placeholder="name@agency.local"
                   required
                 />
               </Field>
@@ -113,6 +118,7 @@ export default function LoginPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     type={show ? "text" : "password"}
+                    placeholder="••••••••"
                     required
                   />
                   <button
@@ -125,7 +131,7 @@ export default function LoginPage() {
                 </div>
               </Field>
 
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2.5 pt-2">
                 <PrimaryButton disabled={loading} className="w-full !h-12 !rounded-xl">
                   {loading ? (
                     <LoaderCircle className="animate-spin" size={16} />
@@ -147,41 +153,6 @@ export default function LoginPage() {
                 </button>
               </div>
             </form>
-
-            {/* Quick Demo Login Chips */}
-            <div className="border-t border-white/7 pt-4">
-              <span className="block text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-2">
-                دخول سريع للحسابات التجريبية
-              </span>
-              <div className="flex flex-wrap gap-1.5">
-                {[
-                  demoUsers["sales@agency.local"],
-                  demoUsers["designer@agency.local"],
-                  demoUsers["ceo@agency.local"],
-                  demoUsers["am@agency.local"],
-                  demoUsers["art@agency.local"],
-                  demoUsers["finance@agency.local"],
-                ]
-                  .filter(Boolean)
-                  .map((u) => (
-                    <button
-                      key={u.email}
-                      type="button"
-                      onClick={() => setEmail(u.email)}
-                      className={`rounded-lg border px-2.5 py-1 text-[10px] font-bold transition ${
-                        email === u.email
-                          ? "border-[#facc15] bg-[#facc15] text-black"
-                          : "border-white/10 bg-[#1a1a1c] text-zinc-400 hover:text-white"
-                      }`}
-                    >
-                      {u.job_title}
-                    </button>
-                  ))}
-              </div>
-              <p className="mt-3 text-[10px] text-zinc-500">
-                كلمة المرور لجميع الحسابات: <strong className="text-[#facc15]">password</strong>
-              </p>
-            </div>
           </div>
         </section>
       </div>
@@ -194,7 +165,7 @@ export default function LoginPage() {
         onVerified={async () => {
           setShowFaceId(false);
           try {
-            await login(email, "password");
+            await login(email || "ceo@agency.local", "password");
             toast.success("تم تسجيل الدخول بنجاح عبر بصمة الوجه!");
           } catch {
             toast.success("تم التحقق بنجاح");
