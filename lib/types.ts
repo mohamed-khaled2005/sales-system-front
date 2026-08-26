@@ -254,6 +254,9 @@ export interface Approval {
 
 export interface Task {
   id: number;
+  client_id?: number;
+  project_id?: number;
+  brief_id?: number;
   title: string;
   department: string;
   type: string;
@@ -285,6 +288,7 @@ export interface Task {
 
 export interface Invoice {
   id: number;
+  client_id?: number;
   number: string;
   issue_date: string;
   due_date: string;
@@ -292,8 +296,48 @@ export interface Invoice {
   tax: number;
   total: number;
   paid_amount: number;
-  status: string;
+  status: "unpaid" | "partial" | "paid" | "overdue" | string;
+  notes?: string | null;
+  created_at?: string;
   client?: Client;
+  payments?: Payment[];
+}
+
+export interface Payment {
+  id: number;
+  invoice_id?: number | null;
+  client_id: number;
+  amount: number;
+  paid_at: string;
+  method?: "bank_transfer" | "cash" | "cheque" | "vodafone_cash" | "instapay" | "credit_card" | string;
+  reference?: string | null;
+  notes?: string | null;
+  created_at?: string;
+  client?: Client;
+  invoice?: Invoice;
+}
+
+export interface Expense {
+  id: number;
+  category: "operational" | "marketing" | "software" | "equipment" | "travel" | "office" | "salaries" | "other" | string;
+  description: string;
+  amount: number;
+  expense_date: string;
+  vendor?: string | null;
+  approved_by?: number | null;
+  attachment?: string | null;
+  created_at?: string;
+  approver?: User;
+}
+
+export interface FinanceSummaryResponse {
+  total_revenue: number;
+  accounts_receivable: number;
+  total_expenses: number;
+  total_salaries_paid: number;
+  net_profit: number;
+  overdue_amount: number;
+  cash_flow: { month: string; value: number; inflow?: number; outflow?: number; net?: number }[];
 }
 
 export interface ShootReschedule {
@@ -312,15 +356,20 @@ export interface ProductionShoot {
   client_id?: number;
   project_id?: number;
   title: string;
-  location?: string;
-  client_phone?: string;
+  location?: string | null;
+  client_phone?: string | null;
   scheduled_at: string;
-  team?: string[];
-  equipment?: string[];
-  vehicle?: string;
+  team?: string[] | null;
+  equipment?: string[] | null;
+  vehicle?: string | null;
+  photographer_id?: number | null;
+  assistant_id?: number | null;
+  call_sheet?: string | null;
+  raw_files?: string[] | null;
   status: "scheduled" | "confirmed" | "in_progress" | "completed" | "cancelled" | "rescheduled" | string;
-  notes?: string;
+  notes?: string | null;
   client?: Client;
+  project?: Project;
   photographer?: User;
   assistant?: User;
   reschedules?: ShootReschedule[];
@@ -331,6 +380,48 @@ export interface EmployeePerformance extends User {
   completed_count: number;
   late_count: number;
   quality_score: number;
+  speed_score?: number;
+  manager_score?: number;
+  client_score?: number;
+  revision_count?: number;
+  department?: Department;
+}
+
+export interface QualityReview {
+  id: number;
+  task_id: number;
+  employee_id: number;
+  reviewer_id?: number | null;
+  quality_score: number;
+  speed_score: number;
+  manager_score?: number | null;
+  client_score?: number | null;
+  revision_count: number;
+  comment?: string | null;
+  reviewed_at?: string;
+  created_at?: string;
+  task?: Task;
+  employee?: User;
+  reviewer?: User;
+}
+
+export interface QualityReportSummary {
+  tasks: number;
+  completed: number;
+  late: number;
+  quality_score: number;
+  speed_score?: number;
+  revision_count: number;
+  on_time_rate?: number;
+}
+
+export interface QualityReportResponse {
+  period: "weekly" | "monthly" | "all" | string;
+  from: string;
+  to: string;
+  summary: QualityReportSummary;
+  employees: EmployeePerformance[];
+  trend?: { month: string; value: number }[];
 }
 
 export interface NotificationItem {
@@ -369,7 +460,7 @@ export interface EmployeeAdjustment {
   amount: number;
   effective_date: string;
   reason: string;
-  notes?: string;
+  notes?: string | null;
   user?: User;
   creator?: User;
 }
@@ -390,4 +481,77 @@ export interface Paginated<T> {
   last_page: number;
   total: number;
   per_page: number;
+}
+
+export interface AttendanceRecord {
+  id: number;
+  user_id: number;
+  date: string;
+  check_in?: string | null;
+  check_out?: string | null;
+  status: "present" | "absent" | "late" | string;
+  minutes_late: number;
+  notes?: string | null;
+  created_at?: string;
+  user: User;
+}
+
+export interface LeaveRequestItem {
+  id: number;
+  user_id: number;
+  type: string;
+  starts_at: string;
+  ends_at: string;
+  days: number;
+  reason?: string | null;
+  status: "pending" | "approved" | "rejected" | string;
+  reviewed_by?: number | null;
+  reviewed_at?: string | null;
+  created_at?: string;
+  user: User;
+  reviewer?: User;
+}
+
+export interface EmployeeContractItem {
+  id: number;
+  user_id: number;
+  contract_type: string;
+  starts_at: string;
+  ends_at?: string | null;
+  base_salary: number;
+  currency: string;
+  document_path?: string | null;
+  status: "active" | "expired" | "terminated" | "draft" | string;
+  notes?: string | null;
+  created_at?: string;
+  user: User;
+}
+
+export interface PayrollItem {
+  id: number;
+  user_id: number;
+  period_month: string;
+  base_salary: number;
+  bonuses: number;
+  commissions: number;
+  deductions: number;
+  net_salary: number;
+  status: "draft" | "approved" | "paid" | string;
+  paid_at?: string | null;
+  payment_reference?: string | null;
+  created_at?: string;
+  user: User;
+}
+
+export interface DeductionEventLogItem {
+  id: number;
+  rule_id: number;
+  user_id: number;
+  event_signature: string;
+  amount: number;
+  adjustment_id?: number | null;
+  created_at?: string;
+  rule?: AutomaticDeductionRule;
+  user?: User;
+  adjustment?: EmployeeAdjustment;
 }

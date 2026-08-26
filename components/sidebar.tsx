@@ -5,28 +5,22 @@ import { cn } from "@/lib/utils";
 import type { Role } from "@/lib/types";
 import { Avatar } from "./ui/avatar";
 import {
-  BriefcaseBusiness,
   Building2,
   Camera,
   CheckCheck,
-  CircleDollarSign,
   ClipboardList,
-  Clock,
   Coins,
-  FileCheck2,
-  FolderArchive,
   Gauge,
   Handshake,
   HelpCircle,
   Home,
-  LayoutDashboard,
   LogOut,
   Menu,
   Package,
   ScanFace,
   ShieldCheck,
+  Sparkles,
   Users,
-  WalletCards,
   X,
 } from "lucide-react";
 import Link from "next/link";
@@ -42,13 +36,35 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { href: "/dashboard", label: "Home", icon: Home, roles: "all" },
+  { href: "/dashboard", label: "Home Dashboard", icon: Home, roles: "all" },
   { href: "/sales", label: "Sales Pipeline", icon: Handshake, roles: ["admin", "ceo", "sales_leader", "sales", "quality"] },
   { href: "/packages", label: "Sales Packages", icon: Package, roles: ["admin", "ceo", "sales_leader", "sales", "account_manager", "finance"] },
-  { href: "/clients", label: "Clients Portfolio", icon: Building2, roles: ["admin", "ceo", "sales_leader", "sales", "account_manager", "finance", "quality"] },
-  { href: "/tasks", label: "Workspace & Tasks", icon: ClipboardList, roles: ["admin", "ceo", "account_manager", "content_creator", "designer", "video_editor", "art_director", "production", "quality"] },
+  { href: "/clients", label: "Clients Portfolio", icon: Building2, roles: ["admin", "ceo", "sales_leader", "sales", "account_manager", "finance", "quality", "customer_support"] },
+  {
+    href: "/tasks",
+    label: "Workspace & Tasks",
+    icon: ClipboardList,
+    roles: [
+      "admin",
+      "ceo",
+      "account_manager",
+      "content_creator",
+      "designer",
+      "video_editor",
+      "art_director",
+      "production",
+      "quality",
+      "media_buyer",
+      "copywriter",
+      "photographer",
+      "social_media_manager",
+      "team_leader",
+      "operations_manager",
+      "customer_support",
+    ],
+  },
   { href: "/approvals", label: "Approvals", icon: CheckCheck, roles: ["admin", "ceo", "account_manager", "art_director", "quality"] },
-  { href: "/production", label: "Production & Shoots", icon: Camera, roles: ["admin", "ceo", "account_manager", "art_director", "production"] },
+  { href: "/production", label: "Production & Shoots", icon: Camera, roles: ["admin", "ceo", "account_manager", "art_director", "production", "photographer"] },
   { href: "/finance", label: "Finance & Bonuses", icon: Coins, roles: ["admin", "ceo", "finance", "designer", "content_creator", "video_editor"] },
   { href: "/quality", label: "Quality & Rating", icon: Gauge, roles: ["admin", "ceo", "quality", "art_director"] },
   { href: "/hr", label: "HR & Attendance", icon: Users, roles: ["admin", "ceo", "hr"] },
@@ -65,28 +81,47 @@ export function Sidebar() {
 
   if (!user) return null;
 
-  const isCreativeOrProduction = ["designer", "video_editor", "content_creator", "production"].includes(user.role);
-
   const items = navItems.filter(
     (item) => item.roles === "all" || (item.roles as Role[]).includes(user.role)
   );
 
   const content = (
-    <div className="flex h-full flex-col justify-between p-4 text-white">
-      <div>
-        {/* User Profile Header */}
-        <div className="flex flex-col items-center pt-3 pb-6 text-center">
-          <div className="relative mb-3">
-            <Avatar name={user.name} size="xl" framed />
+    <div className="flex h-full flex-col justify-between p-3.5 text-white overflow-hidden select-none">
+      {/* Top Header & Navigation Links */}
+      <div className="flex flex-col min-h-0 flex-1">
+        {/* Brand Bar */}
+        <div className="flex items-center justify-between px-1 mb-2.5">
+          <div className="flex items-center gap-2">
+            <div className="grid h-6 w-6 place-items-center rounded-lg bg-gradient-to-br from-[#facc15] to-[#ca8a04] text-black shadow-md shadow-[#facc15]/20">
+              <Sparkles size={12} className="fill-black" />
+            </div>
+            <span className="text-[11px] font-black tracking-widest text-white uppercase">COMMAND CENTER</span>
           </div>
-          <h2 className="text-sm font-black tracking-wider text-white uppercase">{user.name}</h2>
-          <span className="mt-0.5 text-[10px] font-bold tracking-widest text-[#8e8e93] uppercase">
-            {user.job_title ?? user.role.replace("_", " ")}
+          <span className="rounded-md bg-[#facc15]/10 px-1.5 py-0.5 text-[8.5px] font-extrabold text-[#facc15] font-mono border border-[#facc15]/20">
+            PRO
           </span>
         </div>
 
-        {/* Navigation Links */}
-        <nav className="space-y-1.5 px-1">
+        {/* User Profile Card */}
+        <div className="mb-3 rounded-xl border border-white/8 bg-[#141416]/90 p-2.5 backdrop-blur-sm transition hover:border-white/15">
+          <div className="flex items-center gap-2.5">
+            <div className="relative shrink-0">
+              <Avatar name={user.name} size="sm" />
+              <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-500 ring-2 ring-[#141416]" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h2 className="truncate text-xs font-black tracking-wide text-white" title={user.name}>
+                {user.name}
+              </h2>
+              <span className="block truncate text-[10px] font-bold text-[#facc15] font-mono">
+                {user.job_title ?? user.role.replace("_", " ")}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Navigation Links with Optimized Spacing & Height */}
+        <nav className="space-y-1 overflow-y-auto custom-scrollbar flex-1 pr-0.5 py-0.5">
           {items.map(({ href, label, icon: Icon }) => {
             const active = pathname === href || pathname.startsWith(href + "/");
             return (
@@ -95,96 +130,73 @@ export function Sidebar() {
                 href={href}
                 onClick={() => setMobile(false)}
                 className={cn(
-                  "group flex h-10 items-center justify-between rounded-xl px-3 text-xs font-semibold transition-all",
+                  "group flex h-9.5 items-center justify-between rounded-xl px-3 text-xs font-medium transition-all duration-150",
                   active
-                    ? "bg-[#232326] text-white shadow-inner font-bold"
-                    : "text-zinc-400 hover:bg-white/[0.04] hover:text-white"
+                    ? "bg-gradient-to-r from-[#facc15]/18 to-[#facc15]/5 text-[#facc15] font-bold border border-[#facc15]/30 shadow-[0_2px_10px_rgba(250,204,21,0.08)]"
+                    : "text-zinc-400 hover:bg-white/[0.05] hover:text-zinc-100"
                 )}
               >
-                <span className="flex items-center gap-2.5">
+                <span className="flex items-center gap-2.5 truncate">
                   <Icon
                     size={16}
                     className={cn(
-                      "transition-colors",
+                      "shrink-0 transition-colors",
                       active ? "text-[#facc15]" : "text-zinc-500 group-hover:text-zinc-300"
                     )}
                   />
-                  <span>{label}</span>
+                  <span className="truncate">{label}</span>
                 </span>
-                {active && <span className="h-1.5 w-1.5 rounded-full bg-[#facc15]" />}
+                {active ? (
+                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#facc15] shadow-[0_0_6px_#facc15]" />
+                ) : (
+                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-transparent group-hover:bg-white/20 transition-colors" />
+                )}
               </Link>
             );
           })}
         </nav>
       </div>
 
-      {/* Middle & Bottom Widgets */}
-      <div className="space-y-3 pt-4">
-        {/* Shift Timer Widget for Creative / Production Users */}
-        {isCreativeOrProduction && (
-          <div className="rounded-2xl border border-white/7 bg-[#141416] p-3">
-            <div className="flex items-center justify-between text-[11px]">
-              <div className="flex items-center gap-2">
-                <span className="grid h-6 w-6 place-items-center rounded-lg bg-[#facc15]/10 text-[#facc15]">
-                  <Clock size={13} />
-                </span>
-                <span className="text-[10px] font-bold tracking-wider text-zinc-400 uppercase">Shift Timer</span>
-              </div>
-              <strong className="font-mono text-xs text-white">08:00:00</strong>
-            </div>
-
-            <div className="mt-3">
-              <div className="flex items-center justify-between text-[10px] text-zinc-400 font-medium mb-1.5">
-                <span>DAILY PROGRESS</span>
-                <span className="font-bold text-[#facc15]">65%</span>
-              </div>
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
-                <div className="h-full rounded-full bg-[#facc15]" style={{ width: "65%" }} />
-              </div>
-              <span className="mt-1.5 block text-[9px] text-zinc-500">Daily Target Reached</span>
+      {/* Bottom Section: Biometric Widget & Balanced Footer */}
+      <div className="shrink-0 space-y-2.5 pt-2.5 border-t border-white/8 mt-2">
+        {/* Biometric / Face ID Pill */}
+        <div
+          onClick={() => setShowFaceIdModal(true)}
+          className="group flex items-center justify-between rounded-xl border border-white/8 bg-[#141416] p-2.5 hover:border-[#facc15]/35 cursor-pointer transition shadow-sm"
+        >
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-[#facc15]/10 text-[#facc15] group-hover:bg-[#facc15] group-hover:text-black transition">
+              <ScanFace size={15} />
+            </span>
+            <div className="min-w-0">
+              <strong className="block text-[10.5px] font-bold text-white leading-tight truncate">
+                {faceIdActive ? "Face ID Active" : "Face ID Inactive"}
+              </strong>
+              <span className="block text-[9px] text-zinc-500 font-mono truncate">Biometric Security</span>
             </div>
           </div>
-        )}
-
-        {/* Biometric / Face ID Card Widget */}
-        <div className="rounded-2xl border border-white/7 bg-[#141416] p-3.5 text-center transition hover:border-[#facc15]/30">
-          <div
-            onClick={() => setShowFaceIdModal(true)}
-            className="cursor-pointer"
-          >
-            <div className="mx-auto mb-2 grid h-10 w-10 place-items-center rounded-xl bg-[#facc15]/15 text-[#facc15] transition hover:scale-105">
-              <ScanFace size={22} />
-            </div>
-            <strong className="block text-xs font-black text-white">
-              {faceIdActive ? "Face ID Active" : "Face ID Inactive"}
-            </strong>
-            <span className="block text-[9px] text-zinc-500">Biometric Security</span>
-          </div>
-
-          <button
-            onClick={() => setShowFaceIdModal(true)}
-            className="mt-3 w-full rounded-xl bg-[#facc15] py-2 text-[10px] font-black uppercase tracking-wider text-black transition hover:bg-[#fde047] active:scale-95 flex items-center justify-center gap-1.5"
-          >
-            <ScanFace size={13} />
-            <span>Manage Security</span>
-          </button>
+          <span className="shrink-0 rounded-md bg-white/5 group-hover:bg-[#facc15] group-hover:text-black px-2 py-0.5 text-[9px] font-bold text-zinc-400 transition">
+            Manage
+          </span>
         </div>
 
-        {/* Sidebar Footer Actions */}
-        <div className="space-y-1 border-t border-white/7 pt-3">
+        {/* Action Buttons Row */}
+        <div className="flex items-center gap-2">
           <button
+            type="button"
             onClick={() => setShowHelp(true)}
-            className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-medium text-zinc-400 hover:bg-white/5 hover:text-white transition"
+            className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-white/5 py-2 text-[11px] font-medium text-zinc-400 hover:bg-white/10 hover:text-white transition"
           >
-            <HelpCircle size={15} className="text-zinc-500" />
-            <span>Help Center</span>
+            <HelpCircle size={14} className="text-zinc-500" />
+            <span>Help</span>
           </button>
 
           <button
+            type="button"
             onClick={logout}
-            className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-medium text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 transition"
+            className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-rose-500/10 py-2 text-[11px] font-bold text-rose-400 hover:bg-rose-500/20 hover:text-rose-300 transition"
           >
-            <LogOut size={15} />
+            <LogOut size={14} />
             <span>Log Out</span>
           </button>
         </div>
@@ -203,8 +215,9 @@ export function Sidebar() {
             <div className="flex items-center justify-between border-b border-white/10 pb-3 mb-4">
               <h3 className="font-bold text-sm text-white">مركز المساعدة والدعم</h3>
               <button
+                type="button"
                 onClick={() => setShowHelp(false)}
-                className="grid h-7 w-7 place-items-center rounded-lg bg-white/5 text-zinc-400"
+                className="grid h-7 w-7 place-items-center rounded-lg bg-white/5 text-zinc-400 hover:text-white transition"
               >
                 <X size={14} />
               </button>
@@ -226,6 +239,7 @@ export function Sidebar() {
     <>
       {/* Mobile toggle button */}
       <button
+        type="button"
         onClick={() => setMobile(true)}
         className="fixed right-4 top-4 z-50 grid h-10 w-10 place-items-center rounded-xl bg-[#facc15] text-black shadow-lg lg:hidden"
       >
@@ -233,7 +247,7 @@ export function Sidebar() {
       </button>
 
       {/* Desktop Sidebar (Fixed on Right) */}
-      <aside className="fixed inset-y-0 right-0 z-40 hidden w-[260px] flex-col border-l border-white/7 bg-[#0d0d0e] lg:flex overflow-y-auto">
+      <aside className="fixed inset-y-0 right-0 z-40 hidden w-[245px] flex-col border-l border-white/7 bg-[#0d0d0e] lg:flex overflow-hidden">
         {content}
       </aside>
 
@@ -244,13 +258,14 @@ export function Sidebar() {
           onClick={() => setMobile(false)}
         >
           <aside
-            className="fixed inset-y-0 right-0 h-full w-[270px] bg-[#0d0d0e] border-l border-white/10 overflow-y-auto"
+            className="fixed inset-y-0 right-0 h-full w-[265px] bg-[#0d0d0e] border-l border-white/10 overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-end p-3">
               <button
+                type="button"
                 onClick={() => setMobile(false)}
-                className="grid h-8 w-8 place-items-center rounded-lg bg-white/5 text-zinc-400"
+                className="grid h-8 w-8 place-items-center rounded-lg bg-white/5 text-zinc-400 hover:text-white transition"
               >
                 <X size={16} />
               </button>
