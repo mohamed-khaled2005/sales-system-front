@@ -11,7 +11,14 @@ export type Role =
   | "production"
   | "finance"
   | "quality"
-  | "hr";
+  | "hr"
+  | "team_leader"
+  | "operations_manager"
+  | "social_media_manager"
+  | "media_buyer"
+  | "copywriter"
+  | "photographer"
+  | "customer_support";
 
 export interface Department {
   id: number;

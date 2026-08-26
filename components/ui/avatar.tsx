@@ -9,11 +9,12 @@ export function Avatar({
 }: {
   name: string;
   src?: string;
-  size?: "sm" | "md" | "lg" | "xl";
+  size?: "xs" | "sm" | "md" | "lg" | "xl";
   framed?: boolean;
   className?: string;
 }) {
   const sizes = {
+    xs: "h-6 w-6 text-[9px]",
     sm: "h-7 w-7 text-[10px]",
     md: "h-9 w-9 text-xs",
     lg: "h-12 w-12 text-sm",

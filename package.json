@@ -27,6 +27,7 @@
     "@types/react-dom": "^19.0.0",
     "eslint": "^9.0.0",
     "eslint-config-next": "16.2.11",
+    "ssh2": "^1.17.0",
     "tailwindcss": "^4.1.0",
     "typescript": "^5.8.0"
   }
