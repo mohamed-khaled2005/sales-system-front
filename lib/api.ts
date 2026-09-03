@@ -1,7 +1,12 @@
 export function getApiBaseUrl(): string {
   // 1. If explicitly defined in environment and not pointing to localhost on production
-  if (process.env.NEXT_PUBLIC_API_URL && !process.env.NEXT_PUBLIC_API_URL.includes("localhost")) {
-    return process.env.NEXT_PUBLIC_API_URL.replace(/\/+$/, "");
+  let envUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (envUrl && !envUrl.includes("localhost")) {
+    let clean = envUrl.replace(/\/+$/, "");
+    if (clean.includes("mintcream-walrus-725729.hostingersite.com") && !clean.includes("/public")) {
+      clean = clean.replace("hostingersite.com/api/v1", "hostingersite.com/public/api/v1");
+    }
+    return clean;
   }
 
   // 2. Client-side runtime detection
@@ -13,12 +18,18 @@ export function getApiBaseUrl(): string {
       host.includes("mediumseagreen-llama") ||
       host.includes("mintcream-walrus")
     ) {
-      return "https://mintcream-walrus-725729.hostingersite.com/api/v1";
+      return "https://mintcream-walrus-725729.hostingersite.com/public/api/v1";
     }
   }
 
   // 3. Fallback for server-side or local dev
-  return (process.env.NEXT_PUBLIC_API_URL || "https://mintcream-walrus-725729.hostingersite.com/api/v1").replace(/\/+$/, "");
+  const fallback = process.env.NEXT_PUBLIC_API_URL || "https://mintcream-walrus-725729.hostingersite.com/public/api/v1";
+  return fallback
+    .replace(/\/+$/, "")
+    .replace(
+      /mintcream-walrus-725729\.hostingersite\.com\/(?!public\/)api\/v1/,
+      "mintcream-walrus-725729.hostingersite.com/public/api/v1"
+    );
 }
 
 export class ApiError extends Error {
