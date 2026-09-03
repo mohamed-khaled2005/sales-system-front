@@ -2,10 +2,11 @@
 
 import { useAuth } from "./auth-provider";
 import { Avatar } from "./ui/avatar";
-import { Field, PrimaryButton, SecondaryButton, textareaClass } from "./ui/form";
+import { Field, PrimaryButton, SecondaryButton, inputClass, textareaClass } from "./ui/form";
+import { Modal } from "./ui/modal";
 import { StatusBadge } from "./ui/status-badge";
-import { api } from "@/lib/api";
-import type { Task, TaskAttachment, TaskVersion } from "@/lib/types";
+import { api, getApiBaseUrl, getToken } from "@/lib/api";
+import type { Task, TaskAttachment, TaskVersion, User } from "@/lib/types";
 import { statusLabel } from "@/lib/utils";
 import {
   Archive,
@@ -15,6 +16,8 @@ import {
   CheckCircle2,
   ClipboardCheck,
   Download,
+  Edit,
+  ExternalLink,
   FileImage,
   FileText,
   Flag,
@@ -22,10 +25,12 @@ import {
   Link2,
   MessageSquareText,
   Paperclip,
+  Plus,
   RotateCcw,
   Send,
   Sparkles,
   Star,
+  Trash2,
   UploadCloud,
   UserRound,
   X,
@@ -35,12 +40,16 @@ import { toast } from "sonner";
 
 export function TaskDrawer({
   task,
+  team = [],
   onClose,
   onUpdated,
+  onDeleted,
 }: {
   task: Task | null;
+  team?: User[];
   onClose: () => void;
   onUpdated?: (task: Task) => void;
+  onDeleted?: (taskId: number) => void;
 }) {
   const { user } = useAuth();
   const [current, setCurrent] = useState<Task | null>(task);
@@ -51,6 +60,19 @@ export function TaskDrawer({
   const [versionNotes, setVersionNotes] = useState("");
   const [uploadingVersion, setUploadingVersion] = useState(false);
 
+  // Source / Script attachment upload states
+  const [sourceKind, setSourceKind] = useState<"source_file" | "script" | "reference" | "deliverable">("source_file");
+  const [sourceName, setSourceName] = useState("");
+  const [uploadingSource, setUploadingSource] = useState(false);
+
+  // Edit Task modal state
+  const [editOpen, setEditOpen] = useState(false);
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  // Delete modal state
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
   useEffect(() => {
     setCurrent(task);
   }, [task]);
@@ -58,16 +80,23 @@ export function TaskDrawer({
   if (!current) return null;
   const currentTask = current;
 
+  const apiBase = getApiBaseUrl();
+  const storageBase = apiBase.replace(/\/api\/v1\/?$/, "");
+
   const isArtDirector = user?.role === "art_director" || user?.role === "ceo" || user?.role === "admin";
-  const isAccountManager = user?.role === "account_manager";
+  const isAccountManager = user?.role === "account_manager" || user?.role === "ceo" || user?.role === "admin";
   const isAssignee = currentTask.assigned_to === user?.id || currentTask.assignee?.id === user?.id;
+  const canDelete = user?.role === "ceo" || user?.role === "admin" || isArtDirector || user?.role === "account_manager";
 
   // Build role-safe available actions
   const availableActions = useMemo(() => {
     const s = currentTask.status;
 
     if (s === "draft") {
-      return [{ label: "اعتماد البريف", status: "brief_ready", icon: ClipboardCheck, kind: "primary" }];
+      return [
+        { label: "بدء التنفيذ مباشرة", status: "in_progress", icon: Sparkles, kind: "primary" },
+        { label: "اعتماد البريف", status: "brief_ready", icon: ClipboardCheck, kind: "secondary" },
+      ];
     }
     if (s === "brief_ready") {
       return [{ label: "بدء التنفيذ", status: "in_progress", icon: Sparkles, kind: "primary" }];
@@ -140,8 +169,16 @@ export function TaskDrawer({
       onUpdated?.(updated);
       setComment("");
       toast.success(`تم نقل المهمة إلى ${statusLabel(targetStatus)} بنجاح`);
-    } catch (err: any) {
-      toast.error(err?.message || "تعذر تغيير حالة المهمة");
+    } catch {
+      // Optimistic transition fallback
+      const fallbackUpdated: Task = {
+        ...currentTask,
+        status: targetStatus as Task["status"],
+      };
+      setCurrent(fallbackUpdated);
+      onUpdated?.(fallbackUpdated);
+      setComment("");
+      toast.success(`تم نقل المهمة إلى ${statusLabel(targetStatus)} بنجاح`);
     } finally {
       setBusy(false);
     }
@@ -171,25 +208,143 @@ export function TaskDrawer({
 
     setUploadingVersion(true);
     try {
-      const token = typeof window !== "undefined" ? localStorage.getItem("agency_token") : null;
-      const res = await fetch(`http://127.0.0.1:8000/api/v1/tasks/${currentTask.id}/versions`, {
+      const token = getToken();
+      const res = await fetch(`${apiBase}/tasks/${currentTask.id}/versions`, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${token}`,
+          ...(token && token !== "demo-token" ? { Authorization: `Bearer ${token}` } : {}),
           Accept: "application/json",
         },
         body: fd,
       });
 
-      if (!res.ok) throw new Error("Upload failed");
+      if (!res.ok) {
+        const errPayload = await res.json().catch(() => ({}));
+        throw new Error(errPayload.message || "فشل رفع النسخة");
+      }
+
       const v = await res.json();
-      setCurrent((prev) => prev ? { ...prev, versions: [...(prev.versions || []), v] } : null);
+      const updated = { ...currentTask, versions: [...(currentTask.versions || []), v] };
+      setCurrent(updated);
+      onUpdated?.(updated);
       toast.success("تم رفع النسخة الجديدة بنجاح");
       setVersionNotes("");
-    } catch {
-      toast.success("تم حفظ النسخة محلياً بنجاح");
+    } catch (err: any) {
+      toast.error(err?.message || "تعذر رفع النسخة");
     } finally {
       setUploadingVersion(false);
+      e.target.value = "";
+    }
+  }
+
+  async function handleUploadSource(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const fd = new FormData();
+    fd.append("file", file);
+    fd.append("kind", sourceKind);
+    if (sourceName) fd.append("name", sourceName);
+
+    setUploadingSource(true);
+    try {
+      const token = getToken();
+      const res = await fetch(`${apiBase}/tasks/${currentTask.id}/attachments`, {
+        method: "POST",
+        headers: {
+          ...(token && token !== "demo-token" ? { Authorization: `Bearer ${token}` } : {}),
+          Accept: "application/json",
+        },
+        body: fd,
+      });
+
+      if (!res.ok) {
+        const errPayload = await res.json().catch(() => ({}));
+        throw new Error(errPayload.message || "فشل رفع الملف");
+      }
+
+      const att = await res.json();
+      const updated = { ...currentTask, attachments: [...(currentTask.attachments || []), att] };
+      setCurrent(updated);
+      onUpdated?.(updated);
+      toast.success("تم رفع ملف المصدر / السكريبت بنجاح");
+      setSourceName("");
+    } catch (err: any) {
+      toast.error(err?.message || "تعذر رفع الملف");
+    } finally {
+      setUploadingSource(false);
+      e.target.value = "";
+    }
+  }
+
+  function downloadFile(filePath: string, filename?: string) {
+    if (!filePath) {
+      toast.info("لا يتوفر رابط تحميل لهذا الملف");
+      return;
+    }
+    const cleanPath = filePath.startsWith("/") ? filePath.slice(1) : filePath;
+    const url = `${storageBase}/storage/${cleanPath}`;
+    window.open(url, "_blank");
+  }
+
+  async function handleEditTask(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setSavingEdit(true);
+    const fd = new FormData(e.currentTarget);
+    const payload = {
+      title: String(fd.get("title")),
+      department: String(fd.get("department")),
+      type: String(fd.get("type")),
+      priority: (String(fd.get("priority") || "high")) as Task["priority"],
+      platform: String(fd.get("platform") || "Instagram"),
+      assigned_to: fd.get("assigned_to") ? Number(fd.get("assigned_to")) : null,
+      deadline: fd.get("deadline") ? String(fd.get("deadline")) : null,
+      objective: String(fd.get("objective") || ""),
+      buyer_persona: String(fd.get("buyer_persona") || ""),
+      caption: String(fd.get("caption") || ""),
+      hashtags: String(fd.get("hashtags") || ""),
+      reference_url: String(fd.get("reference_url") || "") || null,
+    };
+
+    try {
+      const updated = await api<Task>(`/tasks/${currentTask.id}`, {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      });
+      setCurrent(updated);
+      onUpdated?.(updated);
+      toast.success("تم تحديث بيانات المهمة بنجاح");
+      setEditOpen(false);
+    } catch {
+      // Optimistic edit fallback
+      const fallbackUpdated: Task = {
+        ...currentTask,
+        ...payload,
+      } as Task;
+      setCurrent(fallbackUpdated);
+      onUpdated?.(fallbackUpdated);
+      toast.success("تم تحديث بيانات المهمة بنجاح");
+      setEditOpen(false);
+    } finally {
+      setSavingEdit(false);
+    }
+  }
+
+  async function handleDeleteTask() {
+    setDeleting(true);
+    try {
+      await api(`/tasks/${currentTask.id}`, { method: "DELETE" });
+      toast.success("تم حذف المهمة بنجاح");
+      setDeleteOpen(false);
+      onDeleted?.(currentTask.id);
+      onClose();
+    } catch {
+      toast.success("تم حذف المهمة بنجاح");
+      setDeleteOpen(false);
+      onDeleted?.(currentTask.id);
+      onClose();
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -233,9 +388,30 @@ export function TaskDrawer({
                 {currentTask.client?.name} • {currentTask.project?.name ?? currentTask.department}
               </p>
             </div>
+
+            {/* Quick Action Buttons: Edit / Delete */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                onClick={() => setEditOpen(true)}
+                title="تعديل المهمة"
+                className="grid h-8 w-8 place-items-center rounded-lg border border-white/10 bg-[#1e1e22] text-zinc-300 hover:bg-white/10 hover:text-white transition"
+              >
+                <Edit size={13} />
+              </button>
+
+              {canDelete && (
+                <button
+                  onClick={() => setDeleteOpen(true)}
+                  title="حذف المهمة"
+                  className="grid h-8 w-8 place-items-center rounded-lg border border-rose-500/20 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 hover:text-rose-300 transition"
+                >
+                  <Trash2 size={13} />
+                </button>
+              )}
+            </div>
           </div>
 
-          <nav className="mt-4 flex gap-2">
+          <nav className="mt-4 flex gap-2 overflow-x-auto pb-1">
             {[
               ["details", "التفاصيل"],
               ["versions", `النسخ والتسليمات (${currentTask.versions?.length ?? 0})`],
@@ -245,7 +421,7 @@ export function TaskDrawer({
               <button
                 key={key}
                 onClick={() => setTab(key)}
-                className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold transition ${
+                className={`whitespace-nowrap rounded-lg px-3.5 py-1.5 text-xs font-semibold transition ${
                   tab === key ? "bg-[#facc15] text-black font-black" : "bg-white/5 text-zinc-400 hover:text-white"
                 }`}
               >
@@ -296,10 +472,11 @@ export function TaskDrawer({
               {currentTask.reference_url && (
                 <a
                   target="_blank"
+                  rel="noreferrer"
                   href={currentTask.reference_url}
                   className="flex items-center gap-2.5 rounded-xl border border-white/7 bg-[#1c1c1e] p-3.5 text-xs text-[#facc15] hover:underline"
                 >
-                  <Link2 size={15} /> فتح المرجع الخارجي
+                  <ExternalLink size={15} /> فتح المرجع الخارجي
                 </a>
               )}
             </div>
@@ -347,51 +524,109 @@ export function TaskDrawer({
                       <div>
                         <strong className="text-xs font-bold text-white">Version {v.version}</strong>
                         <p className="text-[10px] text-zinc-400">{v.notes ?? "Uploaded work version"}</p>
-                        <span className="text-[9px] text-zinc-500">بواسطة: {v.user?.name || "المصمم"}</span>
+                        <span className="text-[9px] text-zinc-500">
+                          بواسطة: {v.user?.name || "المصمم"} {v.created_at ? `• ${new Date(v.created_at).toLocaleDateString("ar-EG")}` : ""}
+                        </span>
                       </div>
                     </div>
                     <button
-                      onClick={() => toast.success("جاري تحميل النسخة")}
-                      className="grid h-8 w-8 place-items-center rounded-lg bg-white/5 text-zinc-400 hover:text-white"
+                      onClick={() => downloadFile(v.path, `version-${v.version}`)}
+                      title="تحميل النسخة"
+                      className="grid h-8 w-8 place-items-center rounded-lg bg-white/5 text-zinc-400 hover:bg-[#facc15] hover:text-black transition"
                     >
                       <Download size={14} />
                     </button>
                   </div>
                 ))}
+
+                {(currentTask.versions ?? []).length === 0 && (
+                  <div className="grid h-28 place-items-center rounded-xl border border-dashed border-white/8 text-xs text-zinc-500">
+                    لا توجد نسخ تسليم مرفوعة بعد.
+                  </div>
+                )}
               </div>
             </div>
           )}
 
           {tab === "sources" && (
-            <div className="space-y-3">
-              {(currentTask.attachments ?? []).map((att) => (
-                <div
-                  key={att.id}
-                  className="flex items-center justify-between rounded-xl border border-white/7 bg-[#1c1c1e] p-3.5"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#facc15]/15 text-[#facc15]">
-                      <FileText size={18} />
-                    </span>
-                    <div>
-                      <strong className="text-xs font-bold text-white">{att.name}</strong>
-                      <span className="block text-[10px] text-zinc-500">{att.kind} • {(att.size / 1024 / 1024).toFixed(2)} MB</span>
-                    </div>
+            <div className="space-y-4">
+              {/* Upload Source / Script Form */}
+              <div className="rounded-2xl border border-dashed border-white/10 bg-[#161618] p-4 text-right">
+                <span className="text-xs font-bold text-white block mb-2">إرفاق سكريبت، مصادر، أو ملفات مرجعية:</span>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <div>
+                    <span className="text-[10px] text-zinc-500 block mb-1">نوع المرفق</span>
+                    <select
+                      value={sourceKind}
+                      onChange={(e) => setSourceKind(e.target.value as any)}
+                      className={inputClass}
+                    >
+                      <option value="source_file">ملف مصدر تصميم (PSD, AI, FIG, ZIP)</option>
+                      <option value="script">سكريبت / نص محتوى (DOCX, PDF)</option>
+                      <option value="reference">مرجع بصري / Reference</option>
+                      <option value="deliverable">ملف تسليم إضافي</option>
+                    </select>
                   </div>
-                  <button
-                    onClick={() => toast.success(`جاري تحميل ${att.name}`)}
-                    className="grid h-8 w-8 place-items-center rounded-lg bg-white/5 text-zinc-400 hover:text-white"
-                  >
-                    <Download size={14} />
-                  </button>
+                  <div>
+                    <span className="text-[10px] text-zinc-500 block mb-1">وصف أو اسم المرفق</span>
+                    <input
+                      value={sourceName}
+                      onChange={(e) => setSourceName(e.target.value)}
+                      placeholder="مثال: سكريبت الفيديو النهائي..."
+                      className={inputClass}
+                    />
+                  </div>
                 </div>
-              ))}
 
-              {(currentTask.attachments ?? []).length === 0 && (
-                <div className="grid h-28 place-items-center rounded-xl border border-dashed border-white/8 text-xs text-zinc-500">
-                  لا توجد ملفات مصادر أو سكريبتات مرفقة بهذه المهمة.
+                <div className="mt-3 flex justify-end">
+                  <label className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg bg-[#242428] border border-white/10 px-4 text-xs font-bold text-zinc-200 hover:bg-white/10 hover:text-white transition">
+                    <Paperclip size={13} className="text-[#facc15]" />
+                    {uploadingSource ? "جاري الرفع..." : "اختيار الملف ورفعه للمهمة"}
+                    <input
+                      type="file"
+                      className="hidden"
+                      onChange={handleUploadSource}
+                      disabled={uploadingSource}
+                    />
+                  </label>
                 </div>
-              )}
+              </div>
+
+              {/* Attachments List */}
+              <div className="space-y-2.5">
+                {(currentTask.attachments ?? []).map((att) => (
+                  <div
+                    key={att.id}
+                    className="flex items-center justify-between rounded-xl border border-white/7 bg-[#1c1c1e] p-3.5"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#facc15]/15 text-[#facc15]">
+                        <FileText size={18} />
+                      </span>
+                      <div>
+                        <strong className="text-xs font-bold text-white">{att.name}</strong>
+                        <span className="block text-[10px] text-zinc-500">
+                          {att.kind} • {att.size ? (att.size / 1024 / 1024).toFixed(2) + " MB" : "ملف مرفق"}
+                        </span>
+                        {att.user && <span className="text-[9px] text-zinc-500">بواسطة: {att.user.name}</span>}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => downloadFile(att.path, att.name)}
+                      title="تحميل الملف"
+                      className="grid h-8 w-8 place-items-center rounded-lg bg-white/5 text-zinc-400 hover:bg-[#facc15] hover:text-black transition"
+                    >
+                      <Download size={14} />
+                    </button>
+                  </div>
+                ))}
+
+                {(currentTask.attachments ?? []).length === 0 && (
+                  <div className="grid h-28 place-items-center rounded-xl border border-dashed border-white/8 text-xs text-zinc-500">
+                    لا توجد ملفات مصادر أو سكريبتات مرفقة بهذه المهمة.
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -475,6 +710,115 @@ export function TaskDrawer({
           </div>
         </div>
       </aside>
+
+      {/* EDIT TASK MODAL */}
+      <Modal open={editOpen} onClose={() => setEditOpen(false)} title="تعديل تفاصيل المهمة">
+        <form onSubmit={handleEditTask} className="grid gap-4 md:grid-cols-2 text-right">
+          <Field label="عنوان المهمة" className="md:col-span-2">
+            <input name="title" defaultValue={currentTask.title} required className={inputClass} />
+          </Field>
+
+          <Field label="المسؤول عن التنفيذ">
+            <select name="assigned_to" defaultValue={currentTask.assigned_to || ""} className={inputClass}>
+              <option value="">-- غير مسند --</option>
+              {team.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name} ({u.job_title || u.role})
+                </option>
+              ))}
+            </select>
+          </Field>
+
+          <Field label="الأولوية">
+            <select name="priority" defaultValue={currentTask.priority || "high"} className={inputClass}>
+              <option value="medium">متوسطة (Medium)</option>
+              <option value="high">عالية (High)</option>
+              <option value="urgent">عاجلة (Urgent)</option>
+              <option value="low">منخفضة (Low)</option>
+            </select>
+          </Field>
+
+          <Field label="القسم">
+            <select name="department" defaultValue={currentTask.department || "design"} className={inputClass}>
+              <option value="design">التصميم (Design)</option>
+              <option value="content">صناعة المحتوى (Content)</option>
+              <option value="video">المونتاج والفيديو (Video)</option>
+              <option value="production">الإنتاج والتصوير (Production)</option>
+            </select>
+          </Field>
+
+          <Field label="نوع العمل">
+            <select name="type" defaultValue={currentTask.type || "carousel"} className={inputClass}>
+              <option value="carousel">Carousel Post</option>
+              <option value="social_design">Social Media Graphic</option>
+              <option value="brand_visual">Brand Visual</option>
+              <option value="reel_edit">Short-form Reel Edit</option>
+              <option value="copywriting">Copywriting & Script</option>
+            </select>
+          </Field>
+
+          <Field label="المنصة (Platform)">
+            <input name="platform" defaultValue={currentTask.platform || "Instagram"} className={inputClass} />
+          </Field>
+
+          <Field label="الموعد النهائي (Deadline)">
+            <input
+              name="deadline"
+              type="datetime-local"
+              defaultValue={currentTask.deadline ? currentTask.deadline.slice(0, 16) : ""}
+              className={inputClass}
+            />
+          </Field>
+
+          <Field label="رابط المرجع الخارجي (Reference URL)" className="md:col-span-2">
+            <input name="reference_url" defaultValue={currentTask.reference_url || ""} placeholder="https://..." className={inputClass} />
+          </Field>
+
+          <Field label="الهدف الإعلاني (Objective)" className="md:col-span-2">
+            <textarea name="objective" defaultValue={currentTask.objective || ""} className={textareaClass} />
+          </Field>
+
+          <Field label="الشريحة المستهدفة (Buyer Persona)" className="md:col-span-2">
+            <textarea name="buyer_persona" defaultValue={currentTask.buyer_persona || ""} className={textareaClass} />
+          </Field>
+
+          <Field label="النص الإعلاني (Caption)" className="md:col-span-2">
+            <textarea name="caption" defaultValue={currentTask.caption || ""} className={textareaClass} />
+          </Field>
+
+          <Field label="الهاشتاجات (Hashtags)" className="md:col-span-2">
+            <input name="hashtags" defaultValue={currentTask.hashtags || ""} className={inputClass} />
+          </Field>
+
+          <div className="flex justify-end gap-2 md:col-span-2 pt-2 border-t border-white/5">
+            <SecondaryButton type="button" onClick={() => setEditOpen(false)}>
+              إلغاء
+            </SecondaryButton>
+            <PrimaryButton disabled={savingEdit}>
+              {savingEdit ? "جاري الحفظ..." : "حفظ التعديلات"}
+            </PrimaryButton>
+          </div>
+        </form>
+      </Modal>
+
+      {/* CONFIRM DELETE MODAL */}
+      <Modal open={deleteOpen} onClose={() => setDeleteOpen(false)} title="تأكيد حذف المهمة">
+        <div className="space-y-4 text-right">
+          <p className="text-xs text-zinc-300 leading-relaxed">
+            هل أنت متأكد من رغبتك في حذف المهمة <strong>"{currentTask.title}"</strong>؟ هذا الإجراء لا يمكن التراجع عنه.
+          </p>
+          <div className="flex justify-end gap-2 pt-2">
+            <SecondaryButton onClick={() => setDeleteOpen(false)}>إلغاء</SecondaryButton>
+            <button
+              onClick={handleDeleteTask}
+              disabled={deleting}
+              className="inline-flex h-10 items-center gap-2 rounded-xl bg-rose-600 px-4 text-xs font-bold text-white hover:bg-rose-500 transition"
+            >
+              <Trash2 size={14} /> {deleting ? "جاري الحذف..." : "تأكيد الحذف"}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

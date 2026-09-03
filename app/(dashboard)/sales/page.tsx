@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@/components/auth-provider";
+import { LeadDrawer } from "@/components/lead-drawer";
 import { Avatar } from "@/components/ui/avatar";
 import { Field, inputClass, PrimaryButton, SecondaryButton, textareaClass } from "@/components/ui/form";
 import { MetricCard } from "@/components/ui/metric-card";
@@ -9,7 +10,7 @@ import { SectionHeader } from "@/components/ui/section-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { api } from "@/lib/api";
 import { mockClients, mockLeads } from "@/lib/mock-data";
-import type { Client, Lead, Metric, PackageNegotiation, Paginated, PersonalReminder, User } from "@/lib/types";
+import type { Client, Lead, Metric, Package, PackageNegotiation, Paginated, PersonalReminder, User } from "@/lib/types";
 import { money, statusLabel } from "@/lib/utils";
 import {
   AlertTriangle,
@@ -58,6 +59,8 @@ export default function SalesPage() {
   const [negotiations, setNegotiations] = useState<PackageNegotiation[]>([]);
   const [reminders, setReminders] = useState<PersonalReminder[]>([]);
   const [salesTeam, setSalesTeam] = useState<User[]>([]);
+  const [packages, setPackages] = useState<Package[]>([]);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState<"pipeline" | "negotiations" | "reminders" | "clients" | "commission">("pipeline");
@@ -78,21 +81,23 @@ export default function SalesPage() {
   async function loadAll() {
     setLoading(true);
     try {
-      const [leadsRes, clientsRes, negsRes, remindersRes] = await Promise.all([
+      const [leadsRes, clientsRes, negsRes, remindersRes, pkgsRes, usersRes] = await Promise.all([
         api<Paginated<Lead>>("/leads?per_page=100"),
         api<Paginated<Client>>("/clients?per_page=100"),
         api<Paginated<PackageNegotiation>>("/negotiations"),
         api<Paginated<PersonalReminder>>("/reminders"),
+        api<Package[]>("/packages"),
+        api<User[]>("/users"),
       ]);
 
       if (leadsRes?.data) setLeads(leadsRes.data);
       if (clientsRes?.data) setClients(clientsRes.data);
       if (negsRes?.data) setNegotiations(negsRes.data);
       if (remindersRes?.data) setReminders(remindersRes.data);
-
-      if (isLeaderOrExecutive) {
-        const usersRes = await api<User[]>("/users?role=sales");
-        if (usersRes) setSalesTeam(usersRes);
+      if (pkgsRes && Array.isArray(pkgsRes)) setPackages(pkgsRes);
+      if (usersRes && Array.isArray(usersRes)) {
+        setAllUsers(usersRes);
+        setSalesTeam(usersRes.filter((u) => u.role === "sales" || u.role === "sales_leader"));
       }
     } catch {
       setLeads(mockLeads);
@@ -792,6 +797,26 @@ export default function SalesPage() {
         onCreated={(lead) => {
           setLeads((prev) => [lead, ...prev]);
           setLeadModalOpen(false);
+        }}
+      />
+
+      {/* LEAD DETAILS & ACTIONS DRAWER */}
+      <LeadDrawer
+        lead={selectedLead}
+        packages={packages}
+        team={allUsers}
+        onClose={() => setSelectedLead(null)}
+        onUpdated={(updated) => {
+          setLeads((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
+          setSelectedLead(updated);
+        }}
+        onCloseWon={(newClient) => {
+          setClients((prev) => [newClient, ...prev]);
+          loadAll();
+        }}
+        onDeleted={(deletedId) => {
+          setLeads((prev) => prev.filter((l) => l.id !== deletedId));
+          setSelectedLead(null);
         }}
       />
     </div>

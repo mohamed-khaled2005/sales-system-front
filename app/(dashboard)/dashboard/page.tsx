@@ -3,6 +3,7 @@
 import { useAuth } from "@/components/auth-provider";
 import { Avatar } from "@/components/ui/avatar";
 import { Field, inputClass, PrimaryButton, SecondaryButton, textareaClass } from "@/components/ui/form";
+import { MetricCard } from "@/components/ui/metric-card";
 import { Modal } from "@/components/ui/modal";
 import { PackageBadge, StatusBadge } from "@/components/ui/status-badge";
 import { api } from "@/lib/api";
@@ -176,6 +177,14 @@ export default function DashboardPage() {
       {/* Top Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={loadData}
+            title="إعادة تحميل البيانات"
+            className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-[#1a1a1c] text-zinc-300 hover:bg-white/5 transition"
+          >
+            <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
+          </button>
+
           {isExecutive ? (
             <>
               <PrimaryButton onClick={() => setAddEmployeeOpen(true)}>
@@ -205,6 +214,15 @@ export default function DashboardPage() {
           </h1>
         </div>
       </div>
+
+      {/* Dynamic Metrics Cards Grid from API */}
+      {data.metrics && data.metrics.length > 0 && (
+        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {data.metrics.map((m, i) => (
+            <MetricCard key={m.key || i} metric={m} index={i} />
+          ))}
+        </section>
+      )}
 
       {/* Centralized Employee Requests Area (For CEO / Executives) */}
       {isExecutive && (
@@ -299,10 +317,8 @@ export default function DashboardPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5 text-xs">
-                  {filteredLeads.map((lead, idx) => {
-                    const packages = ["SCALE", "GROWTH", "LAUNCH", "SCALE"];
-                    const packageName = packages[idx % packages.length];
-                    const dealVal = lead.estimated_value || 48000;
+                  {filteredLeads.map((lead) => {
+                    const dealVal = lead.estimated_value || 0;
                     const clientName = lead.company || lead.name;
 
                     return (
@@ -311,9 +327,10 @@ export default function DashboardPage() {
                         <td className="px-3 py-3.5 text-center">
                           <Link
                             href="/sales"
-                            className="inline-grid h-7 w-7 place-items-center rounded-lg text-zinc-400 transition hover:bg-white/10 hover:text-white"
+                            title="الانتقال للمسار"
+                            className="inline-grid h-7 w-7 place-items-center rounded-lg text-zinc-400 transition hover:bg-[#facc15] hover:text-black"
                           >
-                            <Play size={12} className="fill-current" />
+                            <ArrowRight size={12} />
                           </Link>
                         </td>
 
@@ -322,21 +339,25 @@ export default function DashboardPage() {
                           <StatusBadge status={lead.stage === "new" ? "active" : lead.stage} />
                         </td>
 
-                        {/* Package */}
+                        {/* Temperature / Source */}
                         <td className="px-3 py-3.5 text-center">
-                          <PackageBadge name={packageName} />
+                          <span className="rounded-full bg-[#facc15]/15 px-2 py-0.5 text-[9px] font-black text-[#facc15]">
+                            {lead.source || "Direct Lead"}
+                          </span>
                         </td>
 
-                        {/* Deal Value - Centered with explicit margins & padding */}
+                        {/* Deal Value */}
                         <td className="px-5 py-3.5 text-center whitespace-nowrap">
                           <strong className="text-sm font-black text-[#facc15]">
                             {money(dealVal)}
                           </strong>
                         </td>
 
-                        {/* Project Details - Right aligned with padding */}
+                        {/* Notes / Details */}
                         <td className="px-5 py-3.5 text-right text-zinc-300">
-                          <span className="truncate max-w-[220px] block font-medium">Monthly Content & Video Production</span>
+                          <span className="truncate max-w-[220px] block font-medium text-xs">
+                            {lead.notes || "متابعة مسار المبيعات والتفاوض"}
+                          </span>
                         </td>
 
                         {/* Client Name */}
@@ -346,6 +367,14 @@ export default function DashboardPage() {
                       </tr>
                     );
                   })}
+
+                  {filteredLeads.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="py-8 text-center text-xs text-zinc-500">
+                        لا توجد فرص مبيعات نشطة حالياً.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>

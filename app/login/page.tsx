@@ -161,15 +161,10 @@ export default function LoginPage() {
       <FaceIdModal
         open={showFaceId}
         onClose={() => setShowFaceId(false)}
-        mode="verify"
-        onVerified={async () => {
+        mode="login"
+        initialEmail={email}
+        onVerified={() => {
           setShowFaceId(false);
-          try {
-            await login(email || "ceo@agency.local", "password");
-            toast.success("تم تسجيل الدخول بنجاح عبر بصمة الوجه!");
-          } catch {
-            toast.success("تم التحقق بنجاح");
-          }
         }}
       />
     </main>

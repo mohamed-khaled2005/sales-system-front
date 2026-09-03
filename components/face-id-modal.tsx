@@ -35,18 +35,24 @@ interface BiometricStatus {
 export function FaceIdModal({
   open,
   onClose,
-  mode = "manage", // "manage" | "verify" | "checkin"
+  mode = "manage", // "manage" | "verify" | "checkin" | "login"
+  initialEmail = "",
   onVerified,
 }: {
   open: boolean;
   onClose: () => void;
-  mode?: "manage" | "verify" | "checkin";
+  mode?: "manage" | "verify" | "checkin" | "login";
+  initialEmail?: string;
   onVerified?: () => void;
 }) {
-  const { user } = useAuth();
+  const { user, loginWithFace, enrollFaceAndLogin } = useAuth();
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animRef = useRef<number | null>(null);
+
+  const [loginEmail, setLoginEmail] = useState(initialEmail);
+  const [enrollPassword, setEnrollPassword] = useState("");
+  const [isEnrollMode, setIsEnrollMode] = useState(false);
 
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
@@ -66,6 +72,16 @@ export function FaceIdModal({
     device_model: "Integrated Camera Sensor",
     landmarks_count: 68,
   });
+
+  // Sync login email and reset modes on open
+  useEffect(() => {
+    if (open) {
+      const remembered = typeof window !== "undefined" ? localStorage.getItem("agency_last_email") : null;
+      setLoginEmail(initialEmail || remembered || "ceo@agency.local");
+      setIsEnrollMode(false);
+      setEnrollPassword("");
+    }
+  }, [open, initialEmail]);
 
   // Load status from backend
   useEffect(() => {
@@ -283,8 +299,20 @@ export function FaceIdModal({
   }, [open, scanning, isSuccess]);
 
   // Execute Face Scan & Verification Workflow
-  async function triggerScan(actionType: "verify" | "register" | "checkin") {
+  async function triggerScan(actionType: "verify" | "register" | "checkin" | "login") {
     if (scanning) return;
+
+    if (actionType === "login") {
+      if (!loginEmail.trim()) {
+        toast.error("يرجى إدخال البريد الإلكتروني للموظف");
+        return;
+      }
+      if (isEnrollMode && !enrollPassword) {
+        toast.error("يرجى إدخال كلمة المرور لتأكيد الهوية واعتماد بصمتك لأول مرة");
+        return;
+      }
+    }
+
     setScanning(true);
     setIsSuccess(false);
     setConfidence(null);
@@ -296,7 +324,7 @@ export function FaceIdModal({
     const steps = [
       { progress: 25, stage: "تم الكشف عن الوجه • جاري استخراج شبكة المعالم (68 Landmark Nodes)..." },
       { progress: 55, stage: "تحليل البصمة الهندسية ثلاثية الأبعاد (3D Facial Geometry)..." },
-      { progress: 80, stage: "مقارنة البصمة مع السجلات المشفرة في السيرفر..." },
+      { progress: 80, stage: "مقارنة وتشفير البصمة الحيوية في السيرفر..." },
       { progress: 100, stage: "تم التحقق والمطابقة بنجاح!" },
     ];
 
@@ -311,9 +339,23 @@ export function FaceIdModal({
     setIsSuccess(true);
     setScanning(false);
 
-    const faceSignature = `face_sig_${user?.id}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const safeId = user?.id || loginEmail.replace(/[^a-zA-Z0-9]/g, "_");
+    const faceSignature = `face_sig_${safeId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
     try {
+      if (actionType === "login") {
+        if (isEnrollMode) {
+          await enrollFaceAndLogin(loginEmail, enrollPassword, faceSignature);
+          toast.success("تم تسجيل بصمة الوجه بنجاح وتفعيل الدخول البيومتري للمرات القادمة!");
+        } else {
+          await loginWithFace(loginEmail, faceSignature);
+          toast.success(`تم التحقق بنجاح والدخول إلى النظام • نسبة التطابق ${calculatedConfidence}%`);
+        }
+        onVerified?.();
+        onClose();
+        return;
+      }
+
       if (actionType === "register") {
         await api("/biometric/register", {
           method: "POST",
@@ -353,15 +395,20 @@ export function FaceIdModal({
       }
 
       onVerified?.();
-    } catch {
-      toast.success(
-        actionType === "register"
-          ? "تم تسجيل بصمة الوجه بنجاح!"
-          : actionType === "checkin"
-          ? "تم تسجيل الحضور بنجاح!"
-          : `تم التحقق بنجاح • نسبة التطابق ${calculatedConfidence}%`
-      );
-      onVerified?.();
+    } catch (err: any) {
+      if (actionType === "login") {
+        toast.error(err?.message || "فشل تسجيل الدخول ببصمة الوجه. تأكد من البريد أو سجّل بصمتك لأول مرة.");
+        setIsSuccess(false);
+      } else {
+        toast.success(
+          actionType === "register"
+            ? "تم تسجيل بصمة الوجه بنجاح!"
+            : actionType === "checkin"
+            ? "تم تسجيل الحضور بنجاح!"
+            : `تم التحقق بنجاح • نسبة التطابق ${calculatedConfidence}%`
+        );
+        onVerified?.();
+      }
     }
   }
 
@@ -389,16 +436,18 @@ export function FaceIdModal({
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setActiveTab((t) => (t === "scanner" ? "settings" : "scanner"))}
-              className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition ${
-                activeTab === "settings"
-                  ? "bg-[#facc15] text-black"
-                  : "bg-white/5 text-zinc-400 hover:text-white"
-              }`}
-            >
-              {activeTab === "settings" ? "الكاميرا" : "الإعدادات"}
-            </button>
+            {mode !== "login" && (
+              <button
+                onClick={() => setActiveTab((t) => (t === "scanner" ? "settings" : "scanner"))}
+                className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition ${
+                  activeTab === "settings"
+                    ? "bg-[#facc15] text-black"
+                    : "bg-white/5 text-zinc-400 hover:text-white"
+                }`}
+              >
+                {activeTab === "settings" ? "الكاميرا" : "الإعدادات"}
+              </button>
+            )}
 
             <button
               onClick={onClose}
@@ -413,6 +462,44 @@ export function FaceIdModal({
         <div className="p-5 space-y-4">
           {activeTab === "scanner" ? (
             <>
+              {/* Login mode credentials selector */}
+              {mode === "login" && (
+                <div className="rounded-2xl border border-white/8 bg-[#161618] p-3.5 space-y-2.5 text-right">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-zinc-400 font-medium">البريد الإلكتروني للعمل:</span>
+                    <button
+                      type="button"
+                      onClick={() => setIsEnrollMode((v) => !v)}
+                      className="text-[11px] font-bold text-[#facc15] hover:underline"
+                    >
+                      {isEnrollMode ? "← العودة للدخول المباشر" : "تسجيل بصمة جديدة لأول مرة؟"}
+                    </button>
+                  </div>
+                  <input
+                    type="email"
+                    value={loginEmail}
+                    onChange={(e) => setLoginEmail(e.target.value)}
+                    placeholder="name@agency.local"
+                    className="h-10 w-full rounded-xl border border-white/10 bg-[#1c1c1f] px-3 text-xs text-white placeholder:text-zinc-500 outline-none focus:border-[#facc15]/50 text-right"
+                  />
+                  {isEnrollMode && (
+                    <div className="space-y-1 pt-1">
+                      <span className="text-[10px] text-zinc-400 block">كلمة المرور الحالية (للتحقق لأول مرة فقط):</span>
+                      <input
+                        type="password"
+                        value={enrollPassword}
+                        onChange={(e) => setEnrollPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="h-10 w-full rounded-xl border border-white/10 bg-[#1c1c1f] px-3 text-xs text-white placeholder:text-zinc-500 outline-none focus:border-[#facc15]/50 text-right"
+                      />
+                      <p className="text-[10px] text-[#facc15] mt-1 font-medium">
+                        * سيتم حفظ بصمة وجهك البيومترية في السيرفر ولن تحتاج لكلمة المرور في المرات القادمة.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Live Camera Viewport */}
               <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-white/10 bg-black shadow-inner">
                 {/* Real Video Feed */}
@@ -473,34 +560,51 @@ export function FaceIdModal({
               </div>
 
               {/* Action Buttons */}
-              <div className="grid grid-cols-2 gap-2.5 pt-1">
-                <button
-                  disabled={scanning}
-                  onClick={() => triggerScan("verify")}
-                  className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#facc15] px-4 text-xs font-black text-black transition hover:bg-[#fde047] active:scale-95 disabled:opacity-50"
-                >
-                  <ScanFace size={16} />
-                  <span>فحص وتحقق</span>
-                </button>
+              {mode === "login" ? (
+                <div className="pt-1">
+                  <button
+                    disabled={scanning}
+                    onClick={() => triggerScan("login")}
+                    className="w-full inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-[#facc15] px-4 text-xs font-black text-black transition hover:bg-[#fde047] active:scale-95 disabled:opacity-50 shadow-lg shadow-[#facc15]/20"
+                  >
+                    <ScanFace size={18} />
+                    <span>
+                      {isEnrollMode
+                        ? "مسح الوجه واعتماد البصمة والدخول"
+                        : "مسح الوجه وتسجيل الدخول الفوري"}
+                    </span>
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-2.5 pt-1">
+                  <button
+                    disabled={scanning}
+                    onClick={() => triggerScan("verify")}
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#facc15] px-4 text-xs font-black text-black transition hover:bg-[#fde047] active:scale-95 disabled:opacity-50"
+                  >
+                    <ScanFace size={16} />
+                    <span>فحص وتحقق</span>
+                  </button>
 
-                <button
-                  disabled={scanning}
-                  onClick={() => triggerScan("checkin")}
-                  className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-white/10 bg-[#1e1e20] px-4 text-xs font-bold text-white transition hover:bg-white/10 active:scale-95 disabled:opacity-50"
-                >
-                  <UserCheck size={16} className="text-[#facc15]" />
-                  <span>تسجيل حضور</span>
-                </button>
+                  <button
+                    disabled={scanning}
+                    onClick={() => triggerScan("checkin")}
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-white/10 bg-[#1e1e20] px-4 text-xs font-bold text-white transition hover:bg-white/10 active:scale-95 disabled:opacity-50"
+                  >
+                    <UserCheck size={16} className="text-[#facc15]" />
+                    <span>تسجيل حضور</span>
+                  </button>
 
-                <button
-                  disabled={scanning}
-                  onClick={() => triggerScan("register")}
-                  className="col-span-2 inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-dashed border-[#facc15]/40 bg-[#facc15]/5 px-4 text-xs font-bold text-[#facc15] transition hover:bg-[#facc15]/10 active:scale-95"
-                >
-                  <Fingerprint size={15} />
-                  <span>تسجيل / إعادة معايرة بصمة الوجه</span>
-                </button>
-              </div>
+                  <button
+                    disabled={scanning}
+                    onClick={() => triggerScan("register")}
+                    className="col-span-2 inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-dashed border-[#facc15]/40 bg-[#facc15]/5 px-4 text-xs font-bold text-[#facc15] transition hover:bg-[#facc15]/10 active:scale-95"
+                  >
+                    <Fingerprint size={15} />
+                    <span>تسجيل / إعادة معايرة بصمة الوجه</span>
+                  </button>
+                </div>
+              )}
             </>
           ) : (
             /* Settings & Security Details Tab */

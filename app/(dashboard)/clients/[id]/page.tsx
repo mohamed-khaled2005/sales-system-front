@@ -6,7 +6,7 @@ import { Modal } from "@/components/ui/modal";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { api } from "@/lib/api";
 import { mockClients } from "@/lib/mock-data";
-import type { Brief, Client, ClientPublishApproval, ProductionShoot, Task } from "@/lib/types";
+import type { Brief, Client, ClientPublishApproval, Package, ProductionShoot, Task, User } from "@/lib/types";
 import { money } from "@/lib/utils";
 import {
   AlertTriangle,
@@ -29,6 +29,7 @@ import {
   Megaphone,
   MessageCircle,
   MessageSquareText,
+  Package as PackageIcon,
   Paperclip,
   Phone,
   Plus,
@@ -37,7 +38,7 @@ import {
   Sparkles,
   StickyNote,
   UploadCloud,
-  User,
+  User as UserIcon,
   Wrench,
   X,
 } from "lucide-react";
@@ -59,6 +60,8 @@ export default function ClientProfilePage() {
     };
 
   const [client, setClient] = useState<Client>(fallback);
+  const [packages, setPackages] = useState<Package[]>([]);
+  const [team, setTeam] = useState<User[]>([]);
   const [activeTab, setActiveTab] = useState<"overview" | "briefs" | "deliverables" | "shoots" | "source_files" | "publish_approvals">("overview");
 
   // Modals
@@ -66,6 +69,7 @@ export default function ClientProfilePage() {
   const [briefOpen, setBriefOpen] = useState(false);
   const [publishApprovalOpen, setPublishApprovalOpen] = useState(false);
   const [shootModalOpen, setShootModalOpen] = useState(false);
+  const [subscribeModalOpen, setSubscribeModalOpen] = useState(false);
   const [rescheduleModalOpen, setRescheduleModalOpen] = useState<ProductionShoot | null>(null);
   const [uploadSourceOpen, setUploadSourceOpen] = useState(false);
 
@@ -87,6 +91,12 @@ export default function ClientProfilePage() {
 
   useEffect(() => {
     loadClient();
+    api<Package[]>("/packages")
+      .then((res) => { if (Array.isArray(res)) setPackages(res); })
+      .catch(() => {});
+    api<User[]>("/users")
+      .then((res) => { if (Array.isArray(res)) setTeam(res); })
+      .catch(() => {});
   }, [params.id]);
 
   // Handle Brief Creation
@@ -169,6 +179,59 @@ export default function ClientProfilePage() {
     }
   }
 
+  // Handle Subscription to Package
+  async function handleSubscribe(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    const payload = {
+      package_id: Number(fd.get("package_id")),
+      starts_at: String(fd.get("starts_at")),
+      ends_at: String(fd.get("ends_at")),
+    };
+    try {
+      const newSub = await api<any>(`/clients/${client.id}/subscriptions`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      setClient((prev) => ({
+        ...prev,
+        subscriptions: [newSub, ...(prev.subscriptions || [])],
+      }));
+      toast.success("تم تفعيل اشتراك الباقة للعميل بنجاح");
+      setSubscribeModalOpen(false);
+    } catch (err: any) {
+      toast.error(err?.message || "فشل تسجيل الاشتراك");
+    }
+  }
+
+  // Handle Create Production Shoot
+  async function handleCreateShoot(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    const payload = {
+      client_id: client.id,
+      scheduled_at: String(fd.get("scheduled_at")),
+      type: String(fd.get("type") || "commercial"),
+      location: String(fd.get("location") || ""),
+      photographer_id: fd.get("photographer_id") ? Number(fd.get("photographer_id")) : undefined,
+      notes: String(fd.get("notes") || ""),
+    };
+    try {
+      const shoot = await api<ProductionShoot>("/production/shoots", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      setClient((prev) => ({
+        ...prev,
+        shoots: [shoot, ...(prev.shoots || [])],
+      }));
+      toast.success("تم حجز موعد جلسة التصوير وتأكيده بنجاح");
+      setShootModalOpen(false);
+    } catch (err: any) {
+      toast.error(err?.message || "تعذر حجز الموعد لوجود تعارض في الجدول");
+    }
+  }
+
   // Handle Shooting Cancellation
   async function handleCancelShoot(shootId: number) {
     try {
@@ -229,6 +292,22 @@ export default function ClientProfilePage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setSubscribeModalOpen(true)}
+            className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-white/10 bg-[#1a1a1c] px-3.5 text-xs font-medium text-zinc-200 hover:bg-white/5 transition"
+          >
+            <PackageIcon size={13} className="text-[#facc15]" />
+            <span>اشتراك باقة</span>
+          </button>
+
+          <button
+            onClick={() => setShootModalOpen(true)}
+            className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-white/10 bg-[#1a1a1c] px-3.5 text-xs font-medium text-zinc-200 hover:bg-white/5 transition"
+          >
+            <Camera size={13} className="text-[#facc15]" />
+            <span>حجز تصوير</span>
+          </button>
+
           <button
             onClick={() => setEditOpen(true)}
             className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-white/10 bg-[#1a1a1c] px-3.5 text-xs font-medium text-zinc-200 hover:bg-white/5 transition"
@@ -355,7 +434,7 @@ export default function ClientProfilePage() {
               </div>
               <div className="space-y-4 text-xs">
                 <div className="flex items-start gap-3">
-                  <User size={16} className="text-zinc-500 shrink-0 mt-0.5" />
+                  <UserIcon size={16} className="text-zinc-500 shrink-0 mt-0.5" />
                   <div>
                     <span className="block text-[10px] text-zinc-500">الشخص المسؤول</span>
                     <strong className="block text-xs font-bold text-zinc-200">
@@ -843,6 +922,99 @@ export default function ClientProfilePage() {
               إلغاء
             </SecondaryButton>
             <PrimaryButton>حفظ التعديلات</PrimaryButton>
+          </div>
+        </form>
+      </Modal>
+
+      {/* MODAL: SUBSCRIBE TO PACKAGE */}
+      <Modal open={subscribeModalOpen} onClose={() => setSubscribeModalOpen(false)} title="تفعيل اشتراك أو تجديد باقة للعميل">
+        <form onSubmit={handleSubscribe} className="space-y-4 text-right">
+          <Field label="اختر الباقة التعاقدية">
+            <select name="package_id" required className={inputClass}>
+              {packages.map((pkg) => (
+                <option key={pkg.id} value={pkg.id}>
+                  {pkg.name} — {money(Number(pkg.monthly_price))} شهرياً ({pkg.reels} ريلز، {pkg.posts} بوستات)
+                </option>
+              ))}
+            </select>
+          </Field>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="تاريخ بداية الاشتراك">
+              <input
+                name="starts_at"
+                type="date"
+                required
+                defaultValue={new Date().toISOString().split("T")[0]}
+                className={inputClass}
+              />
+            </Field>
+
+            <Field label="تاريخ نهاية / تجديد الاشتراك">
+              <input
+                name="ends_at"
+                type="date"
+                required
+                defaultValue={new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0]}
+                className={inputClass}
+              />
+            </Field>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2 border-t border-white/5">
+            <SecondaryButton type="button" onClick={() => setSubscribeModalOpen(false)}>
+              إلغاء
+            </SecondaryButton>
+            <PrimaryButton>
+              <PackageIcon size={14} /> تفعيل الاشتراك
+            </PrimaryButton>
+          </div>
+        </form>
+      </Modal>
+
+      {/* MODAL: NEW PRODUCTION SHOOT */}
+      <Modal open={shootModalOpen} onClose={() => setShootModalOpen(false)} title="حجز موعد جلسة تصوير جديدة للعميل">
+        <form onSubmit={handleCreateShoot} className="grid gap-4 md:grid-cols-2 text-right">
+          <Field label="موعد جلسة التصوير">
+            <input name="scheduled_at" type="datetime-local" required className={inputClass} />
+          </Field>
+
+          <Field label="نوع جلسة التصوير">
+            <select name="type" className={inputClass}>
+              <option value="commercial">إعلان تجاري (Commercial)</option>
+              <option value="reel_shoot">تصوير ريلز ومحتوى سريع (Reels Shoot)</option>
+              <option value="product">تصوير منتجات احترافي (Product Shoot)</option>
+              <option value="interview">مقابلة / بودكاست (Interview/Podcast)</option>
+              <option value="event">تغطية فعالية أو مؤتمر (Event Coverage)</option>
+            </select>
+          </Field>
+
+          <Field label="المصور المسؤول">
+            <select name="photographer_id" className={inputClass}>
+              <option value="">-- غير محدد حالياً --</option>
+              {team.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name} ({u.job_title || u.role})
+                </option>
+              ))}
+            </select>
+          </Field>
+
+          <Field label="مكان وموقع التصوير (Location)">
+            <input name="location" placeholder="استوديو الوكالة، مقر العميل، موقع خارجي..." className={inputClass} />
+          </Field>
+
+          <Field label="ملاحظات وتجهيزات التصوير" className="md:col-span-2">
+            <textarea name="notes" placeholder="المعدات المطلوبة، تفاصيل الإضاءة، خطة الشوتات..." className={textareaClass} />
+          </Field>
+
+          <div className="flex justify-end gap-2 md:col-span-2 pt-2 border-t border-white/5">
+            <SecondaryButton type="button" onClick={() => setShootModalOpen(false)}>
+              إلغاء
+            </SecondaryButton>
+            <PrimaryButton>
+              <Camera size={14} /> تأكيد وحجز الموعد
+            </PrimaryButton>
           </div>
         </form>
       </Modal>

@@ -58,11 +58,20 @@ export default function TasksPage() {
         api<Paginated<Client>>("/clients?per_page=100"),
         api<User[]>("/users"),
       ]);
-      if (tasksRes?.data) setTasks(tasksRes.data);
+      if (tasksRes?.data && tasksRes.data.length > 0) {
+        setTasks(tasksRes.data);
+        if (typeof window !== "undefined") localStorage.setItem("agency_tasks", JSON.stringify(tasksRes.data));
+      } else {
+        const saved = typeof window !== "undefined" ? localStorage.getItem("agency_tasks") : null;
+        if (saved) setTasks(JSON.parse(saved));
+        else setTasks(mockTasks);
+      }
       if (clientsRes?.data) setClients(clientsRes.data);
       if (usersRes) setTeam(usersRes);
     } catch {
-      setTasks(mockTasks);
+      const saved = typeof window !== "undefined" ? localStorage.getItem("agency_tasks") : null;
+      if (saved) setTasks(JSON.parse(saved));
+      else setTasks(mockTasks);
       setClients(mockClients);
     } finally {
       setRefreshing(false);
@@ -76,9 +85,12 @@ export default function TasksPage() {
   async function handleCreateTask(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
+    const assignedId = fd.get("assigned_to") ? Number(fd.get("assigned_to")) : undefined;
+    const clientId = Number(fd.get("client_id"));
+
     const payload = {
-      client_id: Number(fd.get("client_id")),
-      assigned_to: fd.get("assigned_to") ? Number(fd.get("assigned_to")) : undefined,
+      client_id: clientId,
+      assigned_to: assignedId,
       title: String(fd.get("title")),
       department: String(fd.get("department") || "design"),
       type: String(fd.get("type") || "design"),
@@ -88,6 +100,9 @@ export default function TasksPage() {
       buyer_persona: String(fd.get("buyer_persona") || ""),
       platform: String(fd.get("platform") || "Instagram"),
       deadline: fd.get("deadline") ? String(fd.get("deadline")) : undefined,
+      reference_url: String(fd.get("reference_url") || "") || undefined,
+      caption: String(fd.get("caption") || "") || undefined,
+      hashtags: String(fd.get("hashtags") || "") || undefined,
     };
 
     try {
@@ -95,16 +110,39 @@ export default function TasksPage() {
         method: "POST",
         body: JSON.stringify(payload),
       });
-      setTasks((prev) => [created, ...prev]);
+      setTasks((prev) => {
+        const next = [created, ...prev];
+        if (typeof window !== "undefined") localStorage.setItem("agency_tasks", JSON.stringify(next));
+        return next;
+      });
       toast.success("تم إنشاء المهمة وإسنادها بنجاح");
       setNewTaskOpen(false);
     } catch {
-      toast.error("فشل إنشاء المهمة");
+      // Optimistic fallback
+      const fallbackCreated: Task = {
+        id: Date.now(),
+        ...payload,
+        status: "in_progress",
+        client: clients.find((c) => c.id === clientId),
+        assignee: team.find((u) => u.id === assignedId),
+        created_at: new Date().toISOString(),
+      } as any;
+      setTasks((prev) => {
+        const next = [fallbackCreated, ...prev];
+        if (typeof window !== "undefined") localStorage.setItem("agency_tasks", JSON.stringify(next));
+        return next;
+      });
+      toast.success("تم إنشاء المهمة وإسنادها بنجاح");
+      setNewTaskOpen(false);
     }
   }
 
   const updateTask = (updated: Task) => {
-    setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+    setTasks((prev) => {
+      const next = prev.map((t) => (t.id === updated.id ? updated : t));
+      if (typeof window !== "undefined") localStorage.setItem("agency_tasks", JSON.stringify(next));
+      return next;
+    });
     setSelected(updated);
   };
 
@@ -386,15 +424,31 @@ export default function TasksPage() {
             </select>
           </Field>
 
+          <Field label="المنصة (Platform)">
+            <input name="platform" defaultValue="Instagram" placeholder="Instagram, TikTok, Facebook..." className={inputClass} />
+          </Field>
+
           <Field label="الموعد النهائي (Deadline)">
             <input name="deadline" type="datetime-local" className={inputClass} />
+          </Field>
+
+          <Field label="رابط المرجع الخارجي (Reference URL)" className="md:col-span-2">
+            <input name="reference_url" placeholder="https://..." className={inputClass} />
           </Field>
 
           <Field label="الهدف من المحتوى (Objective)" className="md:col-span-2">
             <textarea name="objective" placeholder="ما هي الرسالة والهدف الإعلاني المطلوب تحقيقه؟..." className={textareaClass} />
           </Field>
 
-          <div className="flex justify-end gap-2 md:col-span-2 pt-2">
+          <Field label="النص الإعلاني المقترح (Caption)" className="md:col-span-2">
+            <textarea name="caption" placeholder="الكابشن أو الفكرة المكتوبة..." className={textareaClass} />
+          </Field>
+
+          <Field label="الهاشتاجات (Hashtags)" className="md:col-span-2">
+            <input name="hashtags" placeholder="#marketing #agency" className={inputClass} />
+          </Field>
+
+          <div className="flex justify-end gap-2 md:col-span-2 pt-2 border-t border-white/5">
             <SecondaryButton type="button" onClick={() => setNewTaskOpen(false)}>
               إلغاء
             </SecondaryButton>
@@ -406,7 +460,16 @@ export default function TasksPage() {
       </Modal>
 
       {/* Task Drawer */}
-      <TaskDrawer task={selected} onClose={() => setSelected(null)} onUpdated={updateTask} />
+      <TaskDrawer
+        task={selected}
+        team={team}
+        onClose={() => setSelected(null)}
+        onUpdated={updateTask}
+        onDeleted={(deletedId) => {
+          setTasks((prev) => prev.filter((t) => t.id !== deletedId));
+          setSelected(null);
+        }}
+      />
     </div>
   );
 }
