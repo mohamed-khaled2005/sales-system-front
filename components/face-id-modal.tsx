@@ -416,30 +416,30 @@ export function FaceIdModal({
 
   return (
     <div
-      className="fixed inset-0 z-[110] grid place-items-center bg-black/85 p-4 backdrop-blur-md"
+      className="fixed inset-0 z-[110] flex items-center justify-center bg-black/85 p-2.5 sm:p-4 backdrop-blur-md overflow-y-auto"
       onMouseDown={onClose}
     >
       <div
         onMouseDown={(e) => e.stopPropagation()}
-        className="panel animate-enter relative max-h-[95vh] w-full max-w-[540px] overflow-hidden border border-[#facc15]/30 bg-[#121214] p-0 shadow-2xl gold-glow-subtle rounded-3xl"
+        className="panel animate-enter relative my-auto flex flex-col max-h-[92vh] w-full max-w-[490px] overflow-hidden border border-[#facc15]/30 bg-[#121214] p-0 shadow-2xl gold-glow-subtle rounded-2xl sm:rounded-3xl shrink-0"
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-white/8 bg-[#161618] px-5 py-4">
-          <div className="flex items-center gap-2.5">
-            <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#facc15]/15 text-[#facc15]">
-              <ScanFace size={20} />
+        <div className="flex shrink-0 items-center justify-between border-b border-white/8 bg-[#161618] px-4 py-3 sm:px-5 sm:py-3.5">
+          <div className="flex items-center gap-2 sm:gap-2.5">
+            <span className="grid h-8 w-8 sm:h-9 sm:w-9 place-items-center rounded-xl bg-[#facc15]/15 text-[#facc15] shrink-0">
+              <ScanFace size={18} className="sm:w-5 sm:h-5" />
             </span>
             <div>
-              <h2 className="text-sm font-black text-white">Face ID • Biometric Security</h2>
-              <span className="text-[10px] font-bold text-zinc-400">نظام التعرف البيومتري على الوجه</span>
+              <h2 className="text-xs sm:text-sm font-black text-white leading-tight">Face ID • Biometric Security</h2>
+              <span className="text-[9px] sm:text-[10px] font-bold text-zinc-400 block mt-0.5">نظام التعرف البيومتري على الوجه</span>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             {mode !== "login" && (
               <button
                 onClick={() => setActiveTab((t) => (t === "scanner" ? "settings" : "scanner"))}
-                className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition ${
+                className={`rounded-lg px-2 sm:px-2.5 py-1 text-[10px] sm:text-[11px] font-bold transition ${
                   activeTab === "settings"
                     ? "bg-[#facc15] text-black"
                     : "bg-white/5 text-zinc-400 hover:text-white"
@@ -451,26 +451,26 @@ export function FaceIdModal({
 
             <button
               onClick={onClose}
-              className="grid h-8 w-8 place-items-center rounded-lg bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white"
+              className="grid h-7 w-7 sm:h-8 sm:w-8 place-items-center rounded-lg bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white transition"
             >
-              <X size={16} />
+              <X size={15} />
             </button>
           </div>
         </div>
 
-        {/* Content Body */}
-        <div className="p-5 space-y-4">
+        {/* Content Body - Scrollable when needed */}
+        <div className="flex-1 overflow-y-auto p-3.5 sm:p-5 space-y-3 sm:space-y-3.5">
           {activeTab === "scanner" ? (
             <>
               {/* Login mode credentials selector */}
               {mode === "login" && (
-                <div className="rounded-2xl border border-white/8 bg-[#161618] p-3.5 space-y-2.5 text-right">
-                  <div className="flex items-center justify-between text-xs">
+                <div className="rounded-xl sm:rounded-2xl border border-white/8 bg-[#161618] p-3 sm:p-3.5 space-y-2 text-right shrink-0">
+                  <div className="flex flex-wrap items-center justify-between gap-1 text-[11px] sm:text-xs">
                     <span className="text-zinc-400 font-medium">البريد الإلكتروني للعمل:</span>
                     <button
                       type="button"
                       onClick={() => setIsEnrollMode((v) => !v)}
-                      className="text-[11px] font-bold text-[#facc15] hover:underline"
+                      className="text-[10px] sm:text-[11px] font-bold text-[#facc15] hover:underline"
                     >
                       {isEnrollMode ? "← العودة للدخول المباشر" : "تسجيل بصمة جديدة لأول مرة؟"}
                     </button>
@@ -480,19 +480,19 @@ export function FaceIdModal({
                     value={loginEmail}
                     onChange={(e) => setLoginEmail(e.target.value)}
                     placeholder="name@agency.local"
-                    className="h-10 w-full rounded-xl border border-white/10 bg-[#1c1c1f] px-3 text-xs text-white placeholder:text-zinc-500 outline-none focus:border-[#facc15]/50 text-right"
+                    className="h-9 sm:h-10 w-full rounded-xl border border-white/10 bg-[#1c1c1f] px-3 text-xs text-white placeholder:text-zinc-500 outline-none focus:border-[#facc15]/50 text-right"
                   />
                   {isEnrollMode && (
-                    <div className="space-y-1 pt-1">
+                    <div className="space-y-1 pt-1 border-t border-white/5 mt-1.5">
                       <span className="text-[10px] text-zinc-400 block">كلمة المرور الحالية (للتحقق لأول مرة فقط):</span>
                       <input
                         type="password"
                         value={enrollPassword}
                         onChange={(e) => setEnrollPassword(e.target.value)}
                         placeholder="••••••••"
-                        className="h-10 w-full rounded-xl border border-white/10 bg-[#1c1c1f] px-3 text-xs text-white placeholder:text-zinc-500 outline-none focus:border-[#facc15]/50 text-right"
+                        className="h-9 sm:h-10 w-full rounded-xl border border-white/10 bg-[#1c1c1f] px-3 text-xs text-white placeholder:text-zinc-500 outline-none focus:border-[#facc15]/50 text-right"
                       />
-                      <p className="text-[10px] text-[#facc15] mt-1 font-medium">
+                      <p className="text-[10px] text-[#facc15] mt-1 font-medium leading-relaxed">
                         * سيتم حفظ بصمة وجهك البيومترية في السيرفر ولن تحتاج لكلمة المرور في المرات القادمة.
                       </p>
                     </div>
@@ -500,8 +500,8 @@ export function FaceIdModal({
                 </div>
               )}
 
-              {/* Live Camera Viewport */}
-              <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-white/10 bg-black shadow-inner">
+              {/* Live Camera Viewport - Proportional & Compact */}
+              <div className="relative aspect-[16/10] sm:aspect-[4/3] max-h-[190px] sm:max-h-[250px] w-full overflow-hidden rounded-xl sm:rounded-2xl border border-white/10 bg-black shadow-inner shrink-0">
                 {/* Real Video Feed */}
                 <video
                   ref={videoRef}
@@ -515,12 +515,12 @@ export function FaceIdModal({
                 <canvas
                   ref={canvasRef}
                   width={480}
-                  height={360}
+                  height={300}
                   className="pointer-events-none absolute inset-0 h-full w-full"
                 />
 
                 {/* Live Telemetry Overlay */}
-                <div className="absolute top-3 left-3 flex flex-col gap-1 rounded-lg bg-black/60 px-2.5 py-1.5 text-[9px] font-mono text-zinc-400 backdrop-blur">
+                <div className="absolute top-2 left-2 sm:top-2.5 sm:left-2.5 flex flex-col gap-0.5 rounded-lg bg-black/70 px-2 py-1 text-[8px] sm:text-[9px] font-mono text-zinc-300 backdrop-blur z-10">
                   <span className="flex items-center gap-1.5">
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
                     CAM: {stream ? "LIVE (30 FPS)" : "SIMULATED SENSOR"}
@@ -533,12 +533,12 @@ export function FaceIdModal({
 
                 {/* Success Indicator Badge */}
                 {isSuccess && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 backdrop-blur-xs animate-enter">
-                    <div className="grid h-16 w-16 place-items-center rounded-2xl bg-emerald-500 text-black shadow-lg">
-                      <CheckCircle2 size={36} />
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-xs animate-enter z-20">
+                    <div className="grid h-12 w-12 sm:h-14 sm:w-14 place-items-center rounded-2xl bg-emerald-500 text-black shadow-lg">
+                      <CheckCircle2 size={30} className="sm:w-8 sm:h-8" />
                     </div>
-                    <span className="mt-3 text-sm font-black text-white">تم التحقق بنجاح!</span>
-                    <span className="text-[11px] font-bold text-[#facc15]">
+                    <span className="mt-2 text-xs sm:text-sm font-black text-white">تم التحقق بنجاح!</span>
+                    <span className="text-[10px] sm:text-[11px] font-bold text-[#facc15]">
                       نسبة المطابقة: {confidence}%
                     </span>
                   </div>
@@ -546,10 +546,10 @@ export function FaceIdModal({
               </div>
 
               {/* Status Message & Progress */}
-              <div className="rounded-xl border border-white/7 bg-[#161618] p-3.5">
-                <div className="flex items-center justify-between text-xs mb-2">
-                  <span className="text-zinc-400 font-medium">{scanStage}</span>
-                  <span className="font-bold text-[#facc15]">{scanProgress}%</span>
+              <div className="rounded-xl border border-white/7 bg-[#161618] p-2.5 sm:p-3 shrink-0">
+                <div className="flex items-center justify-between text-[11px] sm:text-xs mb-1.5 gap-2">
+                  <span className="text-zinc-300 font-medium truncate">{scanStage}</span>
+                  <span className="font-bold text-[#facc15] shrink-0">{scanProgress}%</span>
                 </div>
                 <div className="h-1.5 w-full overflow-hidden rounded-full bg-zinc-800">
                   <div
@@ -561,13 +561,13 @@ export function FaceIdModal({
 
               {/* Action Buttons */}
               {mode === "login" ? (
-                <div className="pt-1">
+                <div className="pt-0.5 shrink-0">
                   <button
                     disabled={scanning}
                     onClick={() => triggerScan("login")}
-                    className="w-full inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-[#facc15] px-4 text-xs font-black text-black transition hover:bg-[#fde047] active:scale-95 disabled:opacity-50 shadow-lg shadow-[#facc15]/20"
+                    className="w-full inline-flex h-11 sm:h-12 items-center justify-center gap-2 rounded-xl bg-[#facc15] px-4 text-xs font-black text-black transition hover:bg-[#fde047] active:scale-95 disabled:opacity-50 shadow-lg shadow-[#facc15]/20"
                   >
-                    <ScanFace size={18} />
+                    <ScanFace size={17} />
                     <span>
                       {isEnrollMode
                         ? "مسح الوجه واعتماد البصمة والدخول"
@@ -576,31 +576,31 @@ export function FaceIdModal({
                   </button>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-2.5 pt-1">
+                <div className="grid grid-cols-2 gap-2 pt-0.5 shrink-0">
                   <button
                     disabled={scanning}
                     onClick={() => triggerScan("verify")}
-                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#facc15] px-4 text-xs font-black text-black transition hover:bg-[#fde047] active:scale-95 disabled:opacity-50"
+                    className="inline-flex h-10 sm:h-11 items-center justify-center gap-2 rounded-xl bg-[#facc15] px-3 sm:px-4 text-xs font-black text-black transition hover:bg-[#fde047] active:scale-95 disabled:opacity-50"
                   >
-                    <ScanFace size={16} />
+                    <ScanFace size={15} />
                     <span>فحص وتحقق</span>
                   </button>
 
                   <button
                     disabled={scanning}
                     onClick={() => triggerScan("checkin")}
-                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-white/10 bg-[#1e1e20] px-4 text-xs font-bold text-white transition hover:bg-white/10 active:scale-95 disabled:opacity-50"
+                    className="inline-flex h-10 sm:h-11 items-center justify-center gap-2 rounded-xl border border-white/10 bg-[#1e1e20] px-3 sm:px-4 text-xs font-bold text-white transition hover:bg-white/10 active:scale-95 disabled:opacity-50"
                   >
-                    <UserCheck size={16} className="text-[#facc15]" />
+                    <UserCheck size={15} className="text-[#facc15]" />
                     <span>تسجيل حضور</span>
                   </button>
 
                   <button
                     disabled={scanning}
                     onClick={() => triggerScan("register")}
-                    className="col-span-2 inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-dashed border-[#facc15]/40 bg-[#facc15]/5 px-4 text-xs font-bold text-[#facc15] transition hover:bg-[#facc15]/10 active:scale-95"
+                    className="col-span-2 inline-flex h-9 sm:h-10 items-center justify-center gap-2 rounded-xl border border-dashed border-[#facc15]/40 bg-[#facc15]/5 px-3 sm:px-4 text-xs font-bold text-[#facc15] transition hover:bg-[#facc15]/10 active:scale-95"
                   >
-                    <Fingerprint size={15} />
+                    <Fingerprint size={14} />
                     <span>تسجيل / إعادة معايرة بصمة الوجه</span>
                   </button>
                 </div>
