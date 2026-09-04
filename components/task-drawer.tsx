@@ -338,11 +338,8 @@ export function TaskDrawer({
       setDeleteOpen(false);
       onDeleted?.(currentTask.id);
       onClose();
-    } catch {
-      toast.success("تم حذف المهمة بنجاح");
-      setDeleteOpen(false);
-      onDeleted?.(currentTask.id);
-      onClose();
+    } catch (err: any) {
+      toast.error(err?.message || "فشل حذف المهمة من السيرفر");
     } finally {
       setDeleting(false);
     }

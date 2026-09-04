@@ -363,9 +363,8 @@ export default function FinancePage() {
       await api(`/finance/invoices/${id}`, { method: "DELETE" });
       setInvoices((prev) => prev.filter((i) => i.id !== id));
       toast.success("تم حذف الفاتورة");
-    } catch {
-      setInvoices((prev) => prev.filter((i) => i.id !== id));
-      toast.success("تم حذف الفاتورة");
+    } catch (err: any) {
+      toast.error(err?.message || "فشل حذف الفاتورة من السيرفر");
     }
   };
 
@@ -376,9 +375,8 @@ export default function FinancePage() {
       await api(`/finance/expenses/${id}`, { method: "DELETE" });
       setExpenses((prev) => prev.filter((e) => e.id !== id));
       toast.success("تم حذف المصروف");
-    } catch {
-      setExpenses((prev) => prev.filter((e) => e.id !== id));
-      toast.success("تم حذف المصروف");
+    } catch (err: any) {
+      toast.error(err?.message || "فشل حذف المصروف من السيرفر");
     }
   };
 
@@ -390,9 +388,8 @@ export default function FinancePage() {
       setPayments((prev) => prev.filter((p) => p.id !== id));
       toast.success("تم إلغاء التحصيل");
       refreshData();
-    } catch {
-      setPayments((prev) => prev.filter((p) => p.id !== id));
-      toast.success("تم إلغاء التحصيل");
+    } catch (err: any) {
+      toast.error(err?.message || "فشل إلغاء التحصيل من السيرفر");
     }
   };
 
@@ -491,11 +488,11 @@ export default function FinancePage() {
 
   // Metrics Array
   const metrics: Metric[] = useMemo(() => [
-    { key: "revenue", label: "التحصيلات والمقبوضات", value: totals.revenue, format: "currency", change: 16.4 },
-    { key: "receivable", label: "مستحقات لدى العملاء", value: totals.receivable, format: "currency", change: 5.2 },
-    { key: "expenses", label: "المصروفات التشغيلية", value: totals.expenses, format: "currency", change: -8.1 },
-    { key: "profit", label: "صافي الأرباح التشغيلية", value: totals.netProfit, format: "currency", change: 14.8 },
-    { key: "overdue", label: "متأخرات حرجة للتحصيل", value: totals.overdue, format: "currency", change: -12.5 },
+    { key: "revenue", label: "التحصيلات والمقبوضات", value: totals.revenue, format: "currency" },
+    { key: "receivable", label: "مستحقات لدى العملاء", value: totals.receivable, format: "currency" },
+    { key: "expenses", label: "المصروفات التشغيلية", value: totals.expenses, format: "currency" },
+    { key: "profit", label: "صافي الأرباح التشغيلية", value: totals.netProfit, format: "currency" },
+    { key: "overdue", label: "متأخرات حرجة للتحصيل", value: totals.overdue, format: "currency" },
   ], [totals]);
 
   return (

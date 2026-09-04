@@ -30,42 +30,9 @@ import {
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-const defaultPackages: Package[] = [
-  {
-    id: 1,
-    name: "Launch",
-    monthly_price: 25000,
-    reels: 4,
-    posts: 8,
-    stories: 12,
-    extra_services: ["Monthly strategy", "Community report"],
-    is_active: true,
-  },
-  {
-    id: 2,
-    name: "Growth",
-    monthly_price: 48000,
-    reels: 8,
-    posts: 12,
-    stories: 24,
-    extra_services: ["Monthly shoot", "Paid campaign setup", "Community management"],
-    is_active: true,
-  },
-  {
-    id: 3,
-    name: "Scale",
-    monthly_price: 85000,
-    reels: 16,
-    posts: 20,
-    stories: 40,
-    extra_services: ["Two shoot days", "Influencer coordination", "Weekly analytics"],
-    is_active: true,
-  },
-];
-
 export default function PackagesPage() {
   const { user } = useAuth();
-  const [packages, setPackages] = useState<Package[]>(defaultPackages);
+  const [packages, setPackages] = useState<Package[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"packages" | "negotiations">("packages");
@@ -90,34 +57,27 @@ export default function PackagesPage() {
   async function loadData() {
     setLoading(true);
     try {
-      const [pkgs, cls, negs] = await Promise.all([
+      const [pkgs, cls, negs] = await Promise.allSettled([
         api<Package[]>("/packages"),
         api<{ data: Client[] }>("/clients?per_page=100"),
         api<{ data: PackageNegotiation[] }>("/negotiations"),
       ]);
-      if (pkgs && pkgs.length > 0) {
-        setPackages(pkgs);
-        if (typeof window !== "undefined") localStorage.setItem("agency_packages", JSON.stringify(pkgs));
+      if (pkgs.status === "fulfilled" && Array.isArray(pkgs.value)) {
+        setPackages(pkgs.value);
       } else {
-        const saved = typeof window !== "undefined" ? localStorage.getItem("agency_packages") : null;
-        if (saved) setPackages(JSON.parse(saved));
-        else setPackages(defaultPackages);
+        setPackages([]);
       }
-      if (cls?.data) {
-        setClients(cls.data);
-        if (cls.data[0]) setSelectedClientId(cls.data[0].id);
+      if (cls.status === "fulfilled" && cls.value?.data) {
+        setClients(cls.value.data);
+        if (cls.value.data[0]) setSelectedClientId(cls.value.data[0].id);
       } else {
         setClients([]);
       }
-      if (negs?.data) setNegotiations(negs.data);
-    } catch {
-      const saved = typeof window !== "undefined" ? localStorage.getItem("agency_packages") : null;
-      if (saved) {
-        setPackages(JSON.parse(saved));
+      if (negs.status === "fulfilled" && negs.value?.data) {
+        setNegotiations(negs.value.data);
       } else {
-        setPackages(defaultPackages);
+        setNegotiations([]);
       }
-      setClients([]);
     } finally {
       setLoading(false);
     }
@@ -219,26 +179,11 @@ export default function PackagesPage() {
         method: "POST",
         body: JSON.stringify(payload),
       });
-      setPackages((prev) => {
-        const next = [...prev, created];
-        if (typeof window !== "undefined") localStorage.setItem("agency_packages", JSON.stringify(next));
-        return next;
-      });
+      setPackages((prev) => [...prev, created]);
       toast.success(`تم إنشاء باقة "${created.name}" بنجاح`);
       setNewPackageOpen(false);
-    } catch {
-      // Fallback update
-      const newPkg: Package = {
-        id: Date.now(),
-        ...payload,
-      };
-      setPackages((prev) => {
-        const next = [...prev, newPkg];
-        if (typeof window !== "undefined") localStorage.setItem("agency_packages", JSON.stringify(next));
-        return next;
-      });
-      toast.success(`تم إنشاء باقة "${newPkg.name}" بنجاح`);
-      setNewPackageOpen(false);
+    } catch (err: any) {
+      toast.error(err?.message || "تعذر إنشاء الباقة على السيرفر");
     } finally {
       setCreatingPackage(false);
     }
@@ -267,26 +212,11 @@ export default function PackagesPage() {
         method: "PUT",
         body: JSON.stringify(payload),
       });
-      setPackages((prev) => {
-        const next = prev.map((p) => (p.id === updated.id ? updated : p));
-        if (typeof window !== "undefined") localStorage.setItem("agency_packages", JSON.stringify(next));
-        return next;
-      });
+      setPackages((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
       toast.success(`تم تحديث باقة "${updated.name}" بنجاح`);
       setEditingPackage(null);
-    } catch {
-      // Fallback update
-      const updatedPkg: Package = {
-        ...editingPackage,
-        ...payload,
-      };
-      setPackages((prev) => {
-        const next = prev.map((p) => (p.id === updatedPkg.id ? updatedPkg : p));
-        if (typeof window !== "undefined") localStorage.setItem("agency_packages", JSON.stringify(next));
-        return next;
-      });
-      toast.success(`تم تحديث باقة "${updatedPkg.name}" بنجاح`);
-      setEditingPackage(null);
+    } catch (err: any) {
+      toast.error(err?.message || "تعذر تحديث الباقة على السيرفر");
     } finally {
       setUpdatingPackage(false);
     }
@@ -297,21 +227,11 @@ export default function PackagesPage() {
     setDeletingPackage(true);
     try {
       await api(`/packages/${packageToDelete.id}`, { method: "DELETE" });
-      setPackages((prev) => {
-        const next = prev.filter((p) => p.id !== packageToDelete.id);
-        if (typeof window !== "undefined") localStorage.setItem("agency_packages", JSON.stringify(next));
-        return next;
-      });
+      setPackages((prev) => prev.filter((p) => p.id !== packageToDelete.id));
       toast.success(`تم حذف باقة "${packageToDelete.name}" بنجاح`);
       setPackageToDelete(null);
-    } catch {
-      setPackages((prev) => {
-        const next = prev.filter((p) => p.id !== packageToDelete.id);
-        if (typeof window !== "undefined") localStorage.setItem("agency_packages", JSON.stringify(next));
-        return next;
-      });
-      toast.success(`تم حذف باقة "${packageToDelete.name}" بنجاح`);
-      setPackageToDelete(null);
+    } catch (err: any) {
+      toast.error(err?.message || "فشل حذف الباقة من السيرفر");
     } finally {
       setDeletingPackage(false);
     }

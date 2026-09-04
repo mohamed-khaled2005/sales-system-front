@@ -165,10 +165,10 @@ export default function ApprovalsPage() {
   const completedApprovedCount = useMemo(() => tasks.filter((t) => ["client_approved", "published", "done"].includes(t.status) || !!t.art_director_approved_at).length, [tasks]);
 
   const metrics: Metric[] = useMemo(() => [
-    { key: "waiting_art", label: "بانتظار المراجعة الفنية (Art Review)", value: waitingArtReviewCount, change: -5 },
-    { key: "need_revision", label: "تعديلات قيد التنفيذ (Revisions)", value: needRevisionCount, change: 2 },
+    { key: "waiting_art", label: "بانتظار المراجعة الفنية (Art Review)", value: waitingArtReviewCount },
+    { key: "need_revision", label: "تعديلات قيد التنفيذ (Revisions)", value: needRevisionCount },
     { key: "client_review", label: "بانتظار موافقة العميل (Client Approval)", value: clientReviewCount },
-    { key: "approved_total", label: "أعمال معتمدة بنجاح", value: completedApprovedCount, change: 18.5 },
+    { key: "approved_total", label: "أعمال معتمدة بنجاح", value: completedApprovedCount },
   ], [waitingArtReviewCount, needRevisionCount, clientReviewCount, completedApprovedCount]);
 
   // Robust Single Task Transition with Concurrency Lock

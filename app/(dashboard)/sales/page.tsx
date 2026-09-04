@@ -79,33 +79,25 @@ export default function SalesPage() {
 
   async function loadAll() {
     setLoading(true);
-    try {
-      const [leadsRes, clientsRes, negsRes, remindersRes, pkgsRes, usersRes] = await Promise.all([
-        api<Paginated<Lead>>("/leads?per_page=100"),
-        api<Paginated<Client>>("/clients?per_page=100"),
-        api<Paginated<PackageNegotiation>>("/negotiations"),
-        api<Paginated<PersonalReminder>>("/reminders"),
-        api<Package[]>("/packages"),
-        api<User[]>("/users"),
-      ]);
+    const [leadsRes, clientsRes, negsRes, remindersRes, pkgsRes, usersRes] = await Promise.allSettled([
+      api<Paginated<Lead>>("/leads?per_page=100"),
+      api<Paginated<Client>>("/clients?per_page=100"),
+      api<Paginated<PackageNegotiation>>("/negotiations"),
+      api<Paginated<PersonalReminder>>("/reminders"),
+      api<Package[]>("/packages"),
+      api<User[]>("/users"),
+    ]);
 
-      if (leadsRes?.data) setLeads(leadsRes.data);
-      else setLeads([]);
-      if (clientsRes?.data) setClients(clientsRes.data);
-      else setClients([]);
-      if (negsRes?.data) setNegotiations(negsRes.data);
-      if (remindersRes?.data) setReminders(remindersRes.data);
-      if (pkgsRes && Array.isArray(pkgsRes)) setPackages(pkgsRes);
-      if (usersRes && Array.isArray(usersRes)) {
-        setAllUsers(usersRes);
-        setSalesTeam(usersRes.filter((u) => u.role === "sales" || u.role === "sales_leader"));
-      }
-    } catch {
-      setLeads([]);
-      setClients([]);
-    } finally {
-      setLoading(false);
+    if (leadsRes.status === "fulfilled" && leadsRes.value?.data) setLeads(leadsRes.value.data);
+    if (clientsRes.status === "fulfilled" && clientsRes.value?.data) setClients(clientsRes.value.data);
+    if (negsRes.status === "fulfilled" && negsRes.value?.data) setNegotiations(negsRes.value.data);
+    if (remindersRes.status === "fulfilled" && remindersRes.value?.data) setReminders(remindersRes.value.data);
+    if (pkgsRes.status === "fulfilled" && Array.isArray(pkgsRes.value)) setPackages(pkgsRes.value);
+    if (usersRes.status === "fulfilled" && Array.isArray(usersRes.value)) {
+      setAllUsers(usersRes.value);
+      setSalesTeam(usersRes.value.filter((u) => u.role === "sales" || u.role === "sales_leader"));
     }
+    setLoading(false);
   }
 
   useEffect(() => {
@@ -120,8 +112,8 @@ export default function SalesPage() {
       setClients((prev) => prev.filter((c) => c.id !== clientToDelete.id));
       toast.success(`تم حذف العميل ${clientToDelete.name} بنجاح`);
       setClientToDelete(null);
-    } catch {
-      toast.error("تعذر حذف العميل");
+    } catch (err: any) {
+      toast.error(err?.message || "تعذر حذف العميل");
     }
   }
 
@@ -179,16 +171,15 @@ export default function SalesPage() {
   const wonValue = leads.filter((l) => l.stage === "won").reduce((a, b) => a + Number(b.estimated_value), 0);
 
   const metrics: Metric[] = [
-    { key: "leads", label: "إجمالي الـ Leads", value: leads.length, change: 12.4 },
-    { key: "hot", label: "Hot Leads", value: leads.filter((l) => l.temperature === "hot").length, change: 6.2 },
+    { key: "leads", label: "إجمالي الـ Leads", value: leads.length },
+    { key: "hot", label: "Hot Leads", value: leads.filter((l) => l.temperature === "hot").length },
     {
       key: "pipeline",
       label: "قيمة الـ Pipeline",
       value: leads.filter((l) => !["won", "lost"].includes(l.stage)).reduce((a, b) => a + Number(b.estimated_value), 0),
       format: "currency",
-      change: 18.7,
     },
-    { key: "won", label: "صفقات مغلقة", value: wonValue, format: "currency", change: 14.1 },
+    { key: "won", label: "صفقات مغلقة", value: wonValue, format: "currency" },
   ];
 
   return (

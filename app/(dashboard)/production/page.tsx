@@ -390,9 +390,8 @@ export default function ProductionPage() {
       await api(`/production/shoots/${id}`, { method: "DELETE" });
       setShoots((prev) => prev.filter((s) => s.id !== id));
       toast.success("تم مسح السجل بنجاح");
-    } catch {
-      setShoots((prev) => prev.filter((s) => s.id !== id));
-      toast.success("تم مسح السجل");
+    } catch (err: any) {
+      toast.error(err?.message || "فشل مسح جلسة التصوير من السيرفر");
     }
   };
 
@@ -464,11 +463,11 @@ export default function ProductionPage() {
   }, [shoots]);
 
   const metrics: Metric[] = useMemo(() => [
-    { key: "upcoming", label: "جلسات تصوير مجدولة وقادمة", value: upcomingShoots.length, change: 12.5 },
-    { key: "week", label: "جلسات تصوير هذا الأسبوع", value: thisWeekShoots.length, change: 8.0 },
-    { key: "completed", label: "جلسات تم إنجازها بنجاح", value: completedCount, change: 15.3 },
+    { key: "upcoming", label: "جلسات تصوير مجدولة وقادمة", value: upcomingShoots.length },
+    { key: "week", label: "جلسات تصوير هذا الأسبوع", value: thisWeekShoots.length },
+    { key: "completed", label: "جلسات تم إنجازها بنجاح", value: completedCount },
     { key: "photographers", label: "فريق ومصورو الإنتاج", value: photographers.length },
-    { key: "equipment", label: "معدات تصوير مجهزة", value: equipmentList.length, format: "percent" },
+    { key: "equipment", label: "معدات تصوير مجهزة", value: equipmentList.length },
   ], [upcomingShoots, thisWeekShoots, completedCount, photographers, equipmentList]);
 
   return (

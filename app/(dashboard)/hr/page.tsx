@@ -226,9 +226,7 @@ export default function HRPage() {
       );
       toast.success(status === "approved" ? "تم اعتماد طلب الإجازة بنجاح ✅" : "تم رفض طلب الإجازة ❌");
     } catch (e: any) {
-      // Optimistic update in demo
-      setLeaves((prev) => prev.map((l) => (l.id === id ? { ...l, status } : l)));
-      toast.success(status === "approved" ? "تم اعتماد الإجازة" : "تم رفض الإجازة");
+      toast.error(e?.message || "تعذر تحديث حالة الإجازة");
     }
   };
 
@@ -256,17 +254,7 @@ export default function HRPage() {
       setEditingAttendance(null);
       refreshData();
     } catch (e: any) {
-      // Demo fallback
-      const targetUser = users.find((u) => u.id === payload.user_id) || users[0] || (user as User);
-      const newRec: AttendanceRecord = {
-        id: editingAttendance?.id || Date.now(),
-        ...payload,
-        user: targetUser,
-      };
-      setAttendances((prev) => [newRec, ...prev.filter((a) => a.id !== newRec.id)]);
-      toast.success("تم حفظ سجل الحضور");
-      setManualAttendanceOpen(false);
-      setEditingAttendance(null);
+      toast.error(e?.message || "فشل حفظ سجل الحضور");
     }
   };
 
@@ -293,16 +281,7 @@ export default function HRPage() {
       setLeaveModalOpen(false);
       refreshData();
     } catch (e: any) {
-      const targetUser = users.find((u) => u.id === payload.user_id) || (user as User) || users[0];
-      const newLeave: LeaveRequestItem = {
-        id: Date.now(),
-        ...payload,
-        status: "pending",
-        user: targetUser,
-      };
-      setLeaves((prev) => [newLeave, ...prev]);
-      toast.success("تم تقديم طلب الإجازة");
-      setLeaveModalOpen(false);
+      toast.error(e?.message || "فشل تقديم طلب الإجازة");
     }
   };
 
@@ -337,17 +316,7 @@ export default function HRPage() {
       setEditingPayroll(null);
       refreshData();
     } catch (e: any) {
-      const targetUser = users.find((u) => u.id === payload.user_id) || users[0] || (user as User);
-      const newPay: PayrollItem = {
-        id: editingPayroll?.id || Date.now(),
-        ...payload,
-        net_salary,
-        user: targetUser,
-      };
-      setPayrolls((prev) => [newPay, ...prev.filter((p) => p.id !== newPay.id)]);
-      toast.success("تم حفظ مسير الراتب");
-      setPayrollModalOpen(false);
-      setEditingPayroll(null);
+      toast.error(e?.message || "فشل حفظ مسير الراتب");
     }
   };
 
@@ -375,15 +344,7 @@ export default function HRPage() {
       setContractModalOpen(false);
       refreshData();
     } catch (e: any) {
-      const targetUser = users.find((u) => u.id === payload.user_id) || users[0] || (user as User);
-      const newContract: EmployeeContractItem = {
-        id: Date.now(),
-        ...payload,
-        user: targetUser,
-      };
-      setContracts((prev) => [newContract, ...prev]);
-      toast.success("تم حفظ العقد");
-      setContractModalOpen(false);
+      toast.error(e?.message || "فشل حفظ العقد");
     }
   };
 
@@ -409,16 +370,7 @@ export default function HRPage() {
       setAdjustmentModalOpen(false);
       refreshData();
     } catch (e: any) {
-      const targetUser = users.find((u) => u.id === payload.user_id) || users[0] || (user as User);
-      const newAdj: EmployeeAdjustment = {
-        id: Date.now(),
-        ...payload,
-        user: targetUser,
-        creator: user ?? undefined,
-      };
-      setAdjustments((prev) => [newAdj, ...prev]);
-      toast.success("تم تسجيل التعديل المالي");
-      setAdjustmentModalOpen(false);
+      toast.error(e?.message || "فشل تسجيل التعديل المالي");
     }
   };
 
@@ -439,8 +391,7 @@ export default function HRPage() {
       setBulkDeductionOpen(false);
       refreshData();
     } catch (e: any) {
-      toast.success(`تم تسجيل الخصم المجمع على الموظفين`);
-      setBulkDeductionOpen(false);
+      toast.error(e?.message || "فشل تطبيق الخصم المجمع");
     }
   };
 
@@ -467,13 +418,7 @@ export default function HRPage() {
       setRuleModalOpen(false);
       refreshData();
     } catch (e: any) {
-      const newRule: AutomaticDeductionRule = {
-        id: Date.now(),
-        ...payload,
-      };
-      setRules((prev) => [newRule, ...prev]);
-      toast.success("تم حفظ قاعدة الخصم التلقائي");
-      setRuleModalOpen(false);
+      toast.error(e?.message || "فشل حفظ وتفعيل قاعدة الخصم");
     }
   };
 
@@ -587,11 +532,11 @@ export default function HRPage() {
     const totalPayroll = payrolls.reduce((sum, p) => sum + Number(p.net_salary || 0), 0);
 
     return [
-      { key: "employees", label: "إجمالي موظفي الوكالة", value: users.length, change: 8.5 },
-      { key: "present", label: "الحضور اليوم", value: presentCount, change: presentCount ? 100 : 0 },
+      { key: "employees", label: "إجمالي موظفي الوكالة", value: users.length },
+      { key: "present", label: "الحضور اليوم", value: presentCount },
       { key: "late", label: "تأخيرات الصباح (> 15 د)", value: lateCount },
       { key: "leaves", label: "طلبات إجازة معلقة", value: pendingLeaves },
-      { key: "payroll", label: "إجمالي رواتب الشهر", value: totalPayroll, format: "currency", change: 5.2 },
+      { key: "payroll", label: "إجمالي رواتب الشهر", value: totalPayroll, format: "currency" },
     ];
   }, [users, attendances, leaves, payrolls]);
 

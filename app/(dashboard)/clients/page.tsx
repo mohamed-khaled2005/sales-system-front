@@ -124,8 +124,8 @@ export default function ClientsPage() {
   const avgHealth = clients.length ? Math.round(clients.reduce((a, c) => a + Number(c.health_score || 85), 0) / clients.length) : 90;
 
   const metrics: Metric[] = [
-    { key: "active", label: "العملاء النشطون", value: activeCount, change: 8.7 },
-    { key: "retainers", label: "Monthly Retainers", value: revenue, format: "currency", change: 11.2 },
+    { key: "active", label: "العملاء النشطون", value: activeCount },
+    { key: "retainers", label: "Monthly Retainers", value: revenue, format: "currency" },
     {
       key: "health",
       label: "متوسط صحة الحسابات",

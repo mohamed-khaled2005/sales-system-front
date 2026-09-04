@@ -19,6 +19,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     }
   }, [loading, user, router, pathname]);
 
+  // Purge any legacy demo caches
+  useEffect(() => {
+    try {
+      localStorage.removeItem("agency_tasks");
+      localStorage.removeItem("agency_packages");
+      localStorage.removeItem("agency_mock_leads");
+      localStorage.removeItem("agency_mock_clients");
+    } catch {}
+  }, []);
+
   // If loading takes more than 2.5s, give recovery options
   useEffect(() => {
     const timer = setTimeout(() => {

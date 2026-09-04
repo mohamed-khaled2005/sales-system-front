@@ -207,9 +207,8 @@ export default function QualityPage() {
       await api(`/quality/reviews/${id}`, { method: "DELETE" });
       setReviews((prev) => prev.filter((r) => r.id !== id));
       toast.success("تم حذف التقييم بنجاح");
-    } catch {
-      setReviews((prev) => prev.filter((r) => r.id !== id));
-      toast.success("تم حذف التقييم");
+    } catch (err: any) {
+      toast.error(err?.message || "فشل حذف التقييم من السيرفر");
     }
   };
 
@@ -274,11 +273,11 @@ export default function QualityPage() {
   // Dynamic KPI Metrics
   const metrics: Metric[] = useMemo(() => {
     return [
-      { key: "quality", label: "مؤشر الجودة العام", value: summary.quality_score, format: "score", change: 4.8 },
-      { key: "done", label: "المهام الإبداعية المنجزة", value: summary.completed, change: 14.2 },
-      { key: "on_time", label: "نسبة الالتزام بالمواعيد", value: summary.on_time_rate ?? 97.8, format: "percent", change: 2.1 },
+      { key: "quality", label: "مؤشر الجودة العام", value: summary.quality_score, format: "score" },
+      { key: "done", label: "المهام الإبداعية المنجزة", value: summary.completed },
+      { key: "on_time", label: "نسبة الالتزام بالمواعيد", value: summary.on_time_rate ?? 0, format: "percent" },
       { key: "late", label: "مهام متأخرة عن الموعد", value: summary.late },
-      { key: "revision", label: "إجمالي جولات التعديل", value: summary.revision_count, change: -15.4 },
+      { key: "revision", label: "إجمالي جولات التعديل", value: summary.revision_count },
     ];
   }, [summary]);
 

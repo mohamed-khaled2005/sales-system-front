@@ -22,15 +22,15 @@ export function MetricCard({ metric, index = 0 }: { metric: Metric; index?: numb
     >
       <div className="flex items-start justify-between">
         <p className="text-xs font-semibold text-zinc-400">{metric.label}</p>
-        {metric.change !== undefined && (
+        {metric.change !== undefined && metric.change !== 0 && (
           <span
             className={`flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[10px] font-bold ${
-              metric.change >= 0
+              metric.change > 0
                 ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
                 : "bg-rose-500/10 text-rose-400 border border-rose-500/20"
             }`}
           >
-            {metric.change >= 0 ? <ArrowUpRight size={11} /> : <ArrowDownLeft size={11} />}
+            {metric.change > 0 ? <ArrowUpRight size={11} /> : <ArrowDownLeft size={11} />}
             {Math.abs(metric.change)}%
           </span>
         )}

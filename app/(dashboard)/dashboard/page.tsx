@@ -76,34 +76,51 @@ export default function DashboardPage() {
   async function loadData() {
     setLoading(true);
     try {
-      const [dashData, leadsData, usersData] = await Promise.all([
-        api<DashboardData>("/dashboard"),
-        api<{ data: Lead[] }>("/leads?per_page=20"),
-        api<User[]>("/users"),
-      ]);
+      const dashData = await api<DashboardData>("/dashboard");
       if (dashData) setData(dashData);
-      if (leadsData?.data) setLeads(leadsData.data);
-      if (usersData) setUsersList(usersData);
-
-      if (isExecutive) {
-        const [reqs, rules] = await Promise.all([
-          api<EmployeeRequest[]>("/hr/employee-requests"),
-          api<AutomaticDeductionRule[]>("/hr/deductions/rules"),
-        ]);
-        if (reqs) setEmployeeRequests(reqs);
-        if (rules) setDeductionRules(rules);
-      }
-    } catch {
-      setData(fallback);
-      setLeads([]);
-    } finally {
-      setLoading(false);
+    } catch (e) {
+      console.warn("Failed to load dashboard metrics", e);
     }
+
+    try {
+      const usersData = await api<User[]>("/users");
+      if (usersData && Array.isArray(usersData)) setUsersList(usersData);
+    } catch (e) {
+      console.warn("Failed to load users", e);
+    }
+
+    const canSeeLeads = isExecutive || user?.role === "sales" || user?.role === "sales_leader" || user?.role === "account_manager";
+    if (canSeeLeads) {
+      try {
+        const leadsData = await api<{ data: Lead[] }>("/leads?per_page=20");
+        if (leadsData?.data) setLeads(leadsData.data);
+      } catch (e) {
+        console.warn("Failed to load leads", e);
+      }
+    }
+
+    if (isExecutive) {
+      try {
+        const reqs = await api<EmployeeRequest[]>("/hr/employee-requests");
+        if (reqs && Array.isArray(reqs)) setEmployeeRequests(reqs);
+      } catch (e) {
+        console.warn("Failed to load employee requests", e);
+      }
+
+      try {
+        const rules = await api<AutomaticDeductionRule[]>("/hr/deductions/rules");
+        if (rules && Array.isArray(rules)) setDeductionRules(rules);
+      } catch (e) {
+        console.warn("Failed to load deduction rules", e);
+      }
+    }
+
+    setLoading(false);
   }
 
   useEffect(() => {
     loadData();
-  }, [fallback, isExecutive]);
+  }, [user?.role, isExecutive]);
 
   // Handle Add Employee (CEO Action)
   async function handleAddEmployee(e: React.FormEvent<HTMLFormElement>) {

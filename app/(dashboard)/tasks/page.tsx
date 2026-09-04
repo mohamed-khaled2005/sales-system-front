@@ -52,22 +52,24 @@ export default function TasksPage() {
   async function loadData() {
     setRefreshing(true);
     try {
-      const [tasksRes, clientsRes, usersRes] = await Promise.all([
+      const [tasksRes, clientsRes, usersRes] = await Promise.allSettled([
         api<Paginated<Task>>("/tasks?per_page=100"),
         api<Paginated<Client>>("/clients?per_page=100"),
         api<User[]>("/users"),
       ]);
-      if (tasksRes?.data) {
-        setTasks(tasksRes.data);
+      if (tasksRes.status === "fulfilled" && tasksRes.value?.data) {
+        setTasks(tasksRes.value.data);
       } else {
         setTasks([]);
       }
-      if (clientsRes?.data) setClients(clientsRes.data);
-      else setClients([]);
-      if (usersRes) setTeam(usersRes);
-    } catch {
-      setTasks([]);
-      setClients([]);
+      if (clientsRes.status === "fulfilled" && clientsRes.value?.data) {
+        setClients(clientsRes.value.data);
+      } else {
+        setClients([]);
+      }
+      if (usersRes.status === "fulfilled" && Array.isArray(usersRes.value)) {
+        setTeam(usersRes.value);
+      }
     } finally {
       setRefreshing(false);
     }
@@ -105,39 +107,16 @@ export default function TasksPage() {
         method: "POST",
         body: JSON.stringify(payload),
       });
-      setTasks((prev) => {
-        const next = [created, ...prev];
-        if (typeof window !== "undefined") localStorage.setItem("agency_tasks", JSON.stringify(next));
-        return next;
-      });
+      setTasks((prev) => [created, ...prev]);
       toast.success("تم إنشاء المهمة وإسنادها بنجاح");
       setNewTaskOpen(false);
-    } catch {
-      // Optimistic fallback
-      const fallbackCreated: Task = {
-        id: Date.now(),
-        ...payload,
-        status: "in_progress",
-        client: clients.find((c) => c.id === clientId),
-        assignee: team.find((u) => u.id === assignedId),
-        created_at: new Date().toISOString(),
-      } as any;
-      setTasks((prev) => {
-        const next = [fallbackCreated, ...prev];
-        if (typeof window !== "undefined") localStorage.setItem("agency_tasks", JSON.stringify(next));
-        return next;
-      });
-      toast.success("تم إنشاء المهمة وإسنادها بنجاح");
-      setNewTaskOpen(false);
+    } catch (err: any) {
+      toast.error(err?.message || "تعذر إنشاء المهمة على السيرفر");
     }
   }
 
   const updateTask = (updated: Task) => {
-    setTasks((prev) => {
-      const next = prev.map((t) => (t.id === updated.id ? updated : t));
-      if (typeof window !== "undefined") localStorage.setItem("agency_tasks", JSON.stringify(next));
-      return next;
-    });
+    setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
     setSelected(updated);
   };
 
