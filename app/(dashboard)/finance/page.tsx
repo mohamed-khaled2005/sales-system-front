@@ -65,53 +65,13 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
-// Demo Fallback Data
-const DEMO_CLIENTS: Client[] = [
-  { id: 1, name: "شركة النور للتطوير العقاري", primary_color: "#facc15", secondary_color: "#000", health_score: 95, status: "active" },
-  { id: 2, name: "مجموعة فودكو العالمية للأغذية", primary_color: "#facc15", secondary_color: "#000", health_score: 92, status: "active" },
-  { id: 3, name: "مدارس النخبة الدولية", primary_color: "#facc15", secondary_color: "#000", health_score: 88, status: "active" },
-  { id: 4, name: "براند إيليت للأزياء والملابس", primary_color: "#facc15", secondary_color: "#000", health_score: 90, status: "active" },
-  { id: 5, name: "عيادات د. هاني التخصصية", primary_color: "#facc15", secondary_color: "#000", health_score: 85, status: "active" },
-];
-
-const DEMO_INVOICES: Invoice[] = [
-  { id: 1, client_id: 1, number: "INV-2026-0081", issue_date: "2026-08-01", due_date: "2026-08-15", subtotal: 65000, tax: 0, total: 65000, paid_amount: 65000, status: "paid", notes: "باقة التسويق الشاملة وإدارة الحملات - شهر أغسطس", client: DEMO_CLIENTS[0] },
-  { id: 2, client_id: 2, number: "INV-2026-0082", issue_date: "2026-08-05", due_date: "2026-08-20", subtotal: 90000, tax: 0, total: 90000, paid_amount: 50000, status: "partial", notes: "إنتاج 8 فيديوهات ريلز إعلانية وحملات ميديا باينج", client: DEMO_CLIENTS[1] },
-  { id: 3, client_id: 3, number: "INV-2026-0083", issue_date: "2026-08-10", due_date: "2026-08-18", subtotal: 45000, tax: 0, total: 45000, paid_amount: 0, status: "overdue", notes: "حملة قبول الطلاب الجدد لموسم 2026", client: DEMO_CLIENTS[2] },
-  { id: 4, client_id: 4, number: "INV-2026-0084", issue_date: "2026-08-15", due_date: "2026-08-30", subtotal: 35000, tax: 0, total: 35000, paid_amount: 0, status: "unpaid", notes: "تصميم وإدارة محتوى إنستغرام وتيك توك", client: DEMO_CLIENTS[3] },
-  { id: 5, client_id: 5, number: "INV-2026-0085", issue_date: "2026-08-18", due_date: "2026-08-25", subtotal: 28000, tax: 0, total: 28000, paid_amount: 0, status: "overdue", notes: "إعلانات جوجل وسناب شات للعيادات", client: DEMO_CLIENTS[4] },
-];
-
-const DEMO_PAYMENTS: Payment[] = [
-  { id: 1, invoice_id: 1, client_id: 1, amount: 65000, paid_at: "2026-08-12T11:30:00", method: "bank_transfer", reference: "BNK-EG-984210", notes: "تحويل بنكي كامل القيمة - البنك الأهلي", client: DEMO_CLIENTS[0], invoice: DEMO_INVOICES[0] },
-  { id: 2, invoice_id: 2, client_id: 2, amount: 50000, paid_at: "2026-08-15T15:00:00", method: "instapay", reference: "INSTA-884912", notes: "دفعة مقدمة 55% عبر إنستاباي", client: DEMO_CLIENTS[1], invoice: DEMO_INVOICES[1] },
-  { id: 3, invoice_id: null, client_id: 4, amount: 15000, paid_at: "2026-08-19T13:45:00", method: "vodafone_cash", reference: "VF-010-992314", notes: "عربون بدء جلسة التصوير الميدانية", client: DEMO_CLIENTS[3] },
-];
-
-const DEMO_EXPENSES: Expense[] = [
-  { id: 1, category: "software", description: "اشتراك باقة Adobe Creative Cloud + Midjourney للفريق الإبداعي", amount: 14500, expense_date: "2026-08-01", vendor: "Adobe Systems / Stripe" },
-  { id: 2, category: "equipment", description: "شراء إضاءات Godox وعدسة 50mm f/1.4 إضافية لقسم الإنتاج", amount: 22000, expense_date: "2026-08-08", vendor: "Kams Video Store" },
-  { id: 3, category: "marketing", description: "شحن رصيد إعلانات ميتا التجريبية لاختبار الجماهير", amount: 18000, expense_date: "2026-08-12", vendor: "Meta Platforms Ireland" },
-  { id: 4, category: "operational", description: "ضيافة واحتياجات مقر الوكالة واشتراك الإنترنت فايبر", amount: 8500, expense_date: "2026-08-14", vendor: "We Telecom & Office Supplies" },
-  { id: 5, category: "travel", description: "بدل انتقالات وسيارات لنقل معدات تصوير إعلان العاصمة الإدارية", amount: 5000, expense_date: "2026-08-17", vendor: "Private Transport" },
-];
-
-const DEMO_SALARIES: PayrollItem[] = [
-  { id: 1, user_id: 1, period_month: "2026-08-01", base_salary: 45000, bonuses: 5000, commissions: 0, deductions: 0, net_salary: 50000, status: "paid", paid_at: "2026-08-25", payment_reference: "TXN-PAY-001", user: { id: 1, name: "يوسف إبراهيم", email: "youssef@agency.local", role: "ceo", job_title: "Chief Executive Officer" } },
-  { id: 2, user_id: 2, period_month: "2026-08-01", base_salary: 22000, bonuses: 2000, commissions: 14500, deductions: 0, net_salary: 38500, status: "paid", paid_at: "2026-08-25", payment_reference: "TXN-PAY-002", user: { id: 2, name: "سارة المنشاوي", email: "sara@agency.local", role: "sales_leader", job_title: "Head of Sales" } },
-  { id: 3, user_id: 3, period_month: "2026-08-01", base_salary: 18000, bonuses: 1500, commissions: 0, deductions: 450, net_salary: 19050, status: "approved", user: { id: 3, name: "أحمد عبد الله", email: "ahmed@agency.local", role: "media_buyer", job_title: "Senior Media Buyer" } },
-  { id: 4, user_id: 4, period_month: "2026-08-01", base_salary: 16000, bonuses: 1000, commissions: 0, deductions: 0, net_salary: 17000, status: "paid", paid_at: "2026-08-25", payment_reference: "TXN-PAY-004", user: { id: 4, name: "كريم فهمي", email: "karim@agency.local", role: "designer", job_title: "Lead Graphic Designer" } },
-  { id: 5, user_id: 5, period_month: "2026-08-01", base_salary: 15000, bonuses: 1200, commissions: 0, deductions: 300, net_salary: 15900, status: "approved", user: { id: 5, name: "مي زكي", email: "mai@agency.local", role: "video_editor", job_title: "Senior Video Editor" } },
-];
-
-const DEFAULT_FLOW = [
-  { month: "مارس", value: 240000, inflow: 240000, outflow: 120000, net: 120000 },
-  { month: "أبريل", value: 290000, inflow: 290000, outflow: 140000, net: 150000 },
-  { month: "مايو", value: 330000, inflow: 330000, outflow: 165000, net: 165000 },
-  { month: "يونيو", value: 380000, inflow: 380000, outflow: 190000, net: 190000 },
-  { month: "يوليو", value: 420000, inflow: 420000, outflow: 210000, net: 210000 },
-  { month: "أغسطس", value: 485000, inflow: 485000, outflow: 233000, net: 252000 },
-];
+// Empty Fallback Data
+const DEMO_CLIENTS: Client[] = [];
+const DEMO_INVOICES: Invoice[] = [];
+const DEMO_PAYMENTS: Payment[] = [];
+const DEMO_EXPENSES: Expense[] = [];
+const DEMO_SALARIES: PayrollItem[] = [];
+const DEFAULT_FLOW: any[] = [];
 
 export default function FinancePage() {
   const { user } = useAuth();
@@ -127,20 +87,20 @@ export default function FinancePage() {
   const [loading, setLoading] = useState(false);
 
   // Entities Data
-  const [clients, setClients] = useState<Client[]>(DEMO_CLIENTS);
-  const [invoices, setInvoices] = useState<Invoice[]>(DEMO_INVOICES);
-  const [payments, setPayments] = useState<Payment[]>(DEMO_PAYMENTS);
-  const [expenses, setExpenses] = useState<Expense[]>(DEMO_EXPENSES);
-  const [salaries, setSalaries] = useState<PayrollItem[]>(DEMO_SALARIES);
-  const [cashFlowData, setCashFlowData] = useState<{ month: string; value: number; inflow?: number; outflow?: number; net?: number }[]>(DEFAULT_FLOW);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [salaries, setSalaries] = useState<PayrollItem[]>([]);
+  const [cashFlowData, setCashFlowData] = useState<{ month: string; value: number; inflow?: number; outflow?: number; net?: number }[]>([]);
   const [summaryData, setSummaryData] = useState<FinanceSummaryResponse>({
-    total_revenue: 485000,
-    accounts_receivable: 148000,
-    total_expenses: 68000,
-    total_salaries_paid: 165000,
-    net_profit: 252000,
-    overdue_amount: 73000,
-    cash_flow: DEFAULT_FLOW,
+    total_revenue: 0,
+    accounts_receivable: 0,
+    total_expenses: 0,
+    total_salaries_paid: 0,
+    net_profit: 0,
+    overdue_amount: 0,
+    cash_flow: [],
   });
 
   // Modal States
@@ -170,38 +130,42 @@ export default function FinancePage() {
       // 2. Invoices
       api<Paginated<Invoice>>("/finance/invoices?per_page=100")
         .then((res) => {
-          if (res?.data && Array.isArray(res.data) && res.data.length) setInvoices(res.data);
+          if (res?.data && Array.isArray(res.data)) setInvoices(res.data);
+          else setInvoices([]);
         })
-        .catch(() => {});
+        .catch(() => { setInvoices([]); });
 
       // 3. Payments
       api<Paginated<Payment>>("/finance/payments?per_page=100")
         .then((res) => {
-          if (res?.data && Array.isArray(res.data) && res.data.length) setPayments(res.data);
+          if (res?.data && Array.isArray(res.data)) setPayments(res.data);
+          else setPayments([]);
         })
-        .catch(() => {});
+        .catch(() => { setPayments([]); });
 
       // 4. Expenses
       api<Paginated<Expense>>("/finance/expenses?per_page=100")
         .then((res) => {
-          if (res?.data && Array.isArray(res.data) && res.data.length) setExpenses(res.data);
+          if (res?.data && Array.isArray(res.data)) setExpenses(res.data);
+          else setExpenses([]);
         })
-        .catch(() => {});
+        .catch(() => { setExpenses([]); });
 
       // 5. Salaries
       api<Paginated<PayrollItem>>("/finance/salaries?per_page=100")
         .then((res) => {
-          if (res?.data && Array.isArray(res.data) && res.data.length) setSalaries(res.data);
+          if (res?.data && Array.isArray(res.data)) setSalaries(res.data);
+          else setSalaries([]);
         })
-        .catch(() => {});
+        .catch(() => { setSalaries([]); });
 
       // 6. Clients list
       api<Paginated<Client> | Client[]>("/clients?per_page=100")
         .then((res: any) => {
           const list = res?.data || (Array.isArray(res) ? res : []);
-          if (list.length) setClients(list);
+          setClients(list);
         })
-        .catch(() => {});
+        .catch(() => { setClients([]); });
     } finally {
       setLoading(false);
     }
@@ -239,8 +203,7 @@ export default function FinancePage() {
       setInvoiceModalOpen(false);
       refreshData();
     } catch (err: any) {
-      // Demo fallback
-      const targetClient = clients.find((c) => c.id === payload.client_id) || DEMO_CLIENTS[0];
+      const targetClient = clients.find((c) => c.id === payload.client_id) || clients[0];
       const newInv: Invoice = {
         id: Date.now(),
         client_id: payload.client_id,
@@ -289,7 +252,7 @@ export default function FinancePage() {
       setSelectedInvoiceForPay(null);
       refreshData();
     } catch (err: any) {
-      const targetClient = clients.find((c) => c.id === clientId) || DEMO_CLIENTS[0];
+      const targetClient = clients.find((c) => c.id === clientId) || clients[0];
       const targetInvoice = invoices.find((i) => i.id === invoiceId);
 
       const newPay: Payment = {

@@ -6,7 +6,6 @@ import { MetricCard } from "@/components/ui/metric-card";
 import { Modal } from "@/components/ui/modal";
 import { SectionHeader } from "@/components/ui/section-header";
 import { api } from "@/lib/api";
-import { mockClients } from "@/lib/mock-data";
 import type { Client, Metric, Package, PackageNegotiation } from "@/lib/types";
 import { money } from "@/lib/utils";
 import {
@@ -67,7 +66,7 @@ const defaultPackages: Package[] = [
 export default function PackagesPage() {
   const { user } = useAuth();
   const [packages, setPackages] = useState<Package[]>(defaultPackages);
-  const [clients, setClients] = useState<Client[]>(mockClients);
+  const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"packages" | "negotiations">("packages");
 
@@ -75,7 +74,7 @@ export default function PackagesPage() {
   const [negotiatingPackage, setNegotiatingPackage] = useState<Package | null>(null);
   const [negotiations, setNegotiations] = useState<PackageNegotiation[]>([]);
   const [submitting, setSubmitting] = useState(false);
-  const [selectedClientId, setSelectedClientId] = useState<number>(mockClients[0]?.id || 1);
+  const [selectedClientId, setSelectedClientId] = useState<number | undefined>(undefined);
   const [proposedPrice, setProposedPrice] = useState<number>(0);
   const [salesNotes, setSalesNotes] = useState("");
 
@@ -104,7 +103,12 @@ export default function PackagesPage() {
         if (saved) setPackages(JSON.parse(saved));
         else setPackages(defaultPackages);
       }
-      if (cls?.data) setClients(cls.data);
+      if (cls?.data) {
+        setClients(cls.data);
+        if (cls.data[0]) setSelectedClientId(cls.data[0].id);
+      } else {
+        setClients([]);
+      }
       if (negs?.data) setNegotiations(negs.data);
     } catch {
       const saved = typeof window !== "undefined" ? localStorage.getItem("agency_packages") : null;
@@ -113,7 +117,7 @@ export default function PackagesPage() {
       } else {
         setPackages(defaultPackages);
       }
-      setClients(mockClients);
+      setClients([]);
     } finally {
       setLoading(false);
     }

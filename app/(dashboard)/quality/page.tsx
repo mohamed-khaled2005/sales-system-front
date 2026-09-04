@@ -55,87 +55,10 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
-// Demo Fallback Data
-const DEMO_EMPLOYEES: EmployeePerformance[] = [
-  { id: 4, name: "كريم فهمي", email: "karim@agency.local", role: "designer", job_title: "Lead Graphic Designer", tasks_count: 38, completed_count: 36, late_count: 0, quality_score: 9.6, speed_score: 9.2, manager_score: 9.5, client_score: 9.8, revision_count: 2 },
-  { id: 5, name: "مي زكي", email: "mai@agency.local", role: "video_editor", job_title: "Senior Video Editor", tasks_count: 32, completed_count: 30, late_count: 1, quality_score: 9.3, speed_score: 8.9, manager_score: 9.2, client_score: 9.4, revision_count: 4 },
-  { id: 8, name: "محمود حسن", email: "mahmoud@agency.local", role: "copywriter", job_title: "Content & Copy Lead", tasks_count: 45, completed_count: 44, late_count: 0, quality_score: 9.1, speed_score: 9.5, manager_score: 9.0, client_score: 9.2, revision_count: 3 },
-  { id: 3, name: "أحمد عبد الله", email: "ahmed@agency.local", role: "media_buyer", job_title: "Senior Media Buyer", tasks_count: 26, completed_count: 24, late_count: 2, quality_score: 8.8, speed_score: 8.6, manager_score: 8.8, client_score: 8.9, revision_count: 5 },
-  { id: 6, name: "عمر شريف", email: "omar@agency.local", role: "account_manager", job_title: "Key Account Manager", tasks_count: 29, completed_count: 28, late_count: 1, quality_score: 8.7, speed_score: 9.0, manager_score: 8.5, client_score: 8.8, revision_count: 3 },
-  { id: 2, name: "سارة المنشاوي", email: "sara@agency.local", role: "sales_leader", job_title: "Head of Sales", tasks_count: 22, completed_count: 22, late_count: 0, quality_score: 9.0, speed_score: 9.2, manager_score: 9.0, client_score: 9.1, revision_count: 1 },
-];
-
-const DEMO_REVIEWS: QualityReview[] = [
-  {
-    id: 1,
-    task_id: 101,
-    employee_id: 4,
-    reviewer_id: 1,
-    quality_score: 10,
-    speed_score: 9,
-    manager_score: 10,
-    client_score: 10,
-    revision_count: 0,
-    comment: "تصميم احترافي استثنائي يتوافق تماماً مع الهوية البصرية للعميل. بدون أي طلبات تعديل.",
-    reviewed_at: "2026-08-25T14:30:00",
-    employee: DEMO_EMPLOYEES[0],
-    task: { id: 101, title: "تصميم البوست الإعلاني لحملة الصيف", department: "design", type: "post", status: "done", priority: "high", client: { id: 1, name: "شركة النور للاستثمار", primary_color: "#facc15", secondary_color: "#000", health_score: 95, status: "active" } },
-  },
-  {
-    id: 2,
-    task_id: 102,
-    employee_id: 5,
-    reviewer_id: 1,
-    quality_score: 9,
-    speed_score: 9,
-    manager_score: 9,
-    client_score: 9,
-    revision_count: 1,
-    comment: "المونتاج والانتقالات الموسيقية متقنة جداً، تم ضبط الـ Hook في أول 3 ثوانٍ بنجاح.",
-    reviewed_at: "2026-08-24T17:15:00",
-    employee: DEMO_EMPLOYEES[1],
-    task: { id: 102, title: "مونتاج فيديو ريلز إطلاق المنتج الجديد", department: "video", type: "reel", status: "done", priority: "urgent", client: { id: 2, name: "مجموعة فودكو العالمية", primary_color: "#facc15", secondary_color: "#000", health_score: 90, status: "active" } },
-  },
-  {
-    id: 3,
-    task_id: 103,
-    employee_id: 8,
-    reviewer_id: 1,
-    quality_score: 9,
-    speed_score: 10,
-    manager_score: 9,
-    client_score: 9,
-    revision_count: 1,
-    comment: "نص إعلاني جذاب جداً ونبرة صوت مناسبة لجمهور الشباب المستهدف.",
-    reviewed_at: "2026-08-23T11:00:00",
-    employee: DEMO_EMPLOYEES[2],
-    task: { id: 103, title: "كتابة سكريبت إعلان العودة للمدارس", department: "content", type: "script", status: "done", priority: "medium", client: { id: 3, name: "مدارس النخبة الدولية", primary_color: "#facc15", secondary_color: "#000", health_score: 88, status: "active" } },
-  },
-  {
-    id: 4,
-    task_id: 104,
-    employee_id: 3,
-    reviewer_id: 1,
-    quality_score: 8,
-    speed_score: 8,
-    manager_score: 9,
-    client_score: 8,
-    revision_count: 2,
-    comment: "تحقيق عائد ROAS جيد جداً (4.5x) ولكن حدث تأخير بسيط في تفعيل حملة سناب شات.",
-    reviewed_at: "2026-08-21T16:00:00",
-    employee: DEMO_EMPLOYEES[3],
-    task: { id: 104, title: "إدارة وتتبع حملة إعلانات التيك توك", department: "media_buying", type: "campaign", status: "done", priority: "high", client: { id: 4, name: "براند إيليت للأزياء", primary_color: "#facc15", secondary_color: "#000", health_score: 92, status: "active" } },
-  },
-];
-
-const DEFAULT_TREND = [
-  { month: "مارس", value: 8.4 },
-  { month: "أبريل", value: 8.6 },
-  { month: "مايو", value: 8.8 },
-  { month: "يونيو", value: 9.0 },
-  { month: "يوليو", value: 8.9 },
-  { month: "أغسطس", value: 9.2 },
-];
+// Empty Fallback Data
+const DEMO_EMPLOYEES: EmployeePerformance[] = [];
+const DEMO_REVIEWS: QualityReview[] = [];
+const DEFAULT_TREND: any[] = [];
 
 export default function QualityPage() {
   const { user } = useAuth();
@@ -151,18 +74,18 @@ export default function QualityPage() {
   const [loading, setLoading] = useState(false);
 
   // Data States
-  const [employees, setEmployees] = useState<EmployeePerformance[]>(DEMO_EMPLOYEES);
-  const [reviews, setReviews] = useState<QualityReview[]>(DEMO_REVIEWS);
+  const [employees, setEmployees] = useState<EmployeePerformance[]>([]);
+  const [reviews, setReviews] = useState<QualityReview[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [trendData, setTrendData] = useState(DEFAULT_TREND);
+  const [trendData, setTrendData] = useState<any[]>([]);
   const [summary, setSummary] = useState({
-    tasks: 192,
-    completed: 184,
-    late: 4,
-    quality_score: 9.1,
-    speed_score: 9.0,
-    revision_count: 15,
-    on_time_rate: 97.8,
+    tasks: 0,
+    completed: 0,
+    late: 0,
+    quality_score: 0,
+    speed_score: 0,
+    revision_count: 0,
+    on_time_rate: 0,
   });
 
   // Modal States
@@ -194,20 +117,24 @@ export default function QualityPage() {
       // 2. Fetch Detailed Reviews
       api<Paginated<QualityReview>>("/quality/reviews?per_page=100")
         .then((res) => {
-          if (res?.data && Array.isArray(res.data) && res.data.length) {
+          if (res?.data && Array.isArray(res.data)) {
             setReviews(res.data);
+          } else {
+            setReviews([]);
           }
         })
-        .catch(() => {});
+        .catch(() => { setReviews([]); });
 
       // 3. Fetch Tasks for selector
       api<Paginated<Task>>("/tasks?per_page=100")
         .then((res) => {
           if (res?.data && Array.isArray(res.data)) {
             setTasks(res.data);
+          } else {
+            setTasks([]);
           }
         })
-        .catch(() => {});
+        .catch(() => { setTasks([]); });
     } finally {
       setLoading(false);
     }
@@ -219,7 +146,7 @@ export default function QualityPage() {
 
   // Employee of the Month (Highest Quality Score with completed tasks)
   const employeeOfTheMonth = useMemo(() => {
-    if (!employees.length) return DEMO_EMPLOYEES[0];
+    if (!employees.length) return null;
     return [...employees].sort((a, b) => b.quality_score - a.quality_score || b.completed_count - a.completed_count)[0];
   }, [employees]);
 
@@ -256,9 +183,8 @@ export default function QualityPage() {
       setEditingReview(null);
       refreshData();
     } catch (err: any) {
-      // Optimistic demo fallback
-      const targetEmp = employees.find((e) => e.id === payload.employee_id) || DEMO_EMPLOYEES[0];
-      const targetTask = tasks.find((t) => t.id === payload.task_id) || DEMO_REVIEWS[0].task;
+      const targetEmp = employees.find((e) => e.id === payload.employee_id) || employees[0];
+      const targetTask = tasks.find((t) => t.id === payload.task_id) || tasks[0];
       const newRev: QualityReview = {
         id: editingReview?.id || Date.now(),
         ...payload,
@@ -501,10 +427,10 @@ export default function QualityPage() {
                 </div>
 
                 <div className="mt-5 flex items-center gap-3.5">
-                  <Avatar name={employeeOfTheMonth?.name || "Employee"} size="lg" framed />
+                  <Avatar name={employeeOfTheMonth?.name || "-"} size="lg" framed />
                   <div>
-                    <h3 className="text-lg font-black text-white">{employeeOfTheMonth?.name}</h3>
-                    <p className="text-xs text-zinc-400 font-medium">{employeeOfTheMonth?.job_title || getRoleLabel(employeeOfTheMonth?.role)}</p>
+                    <h3 className="text-lg font-black text-white">{employeeOfTheMonth?.name || "لا يوجد بعد"}</h3>
+                    <p className="text-xs text-zinc-400 font-medium">{employeeOfTheMonth?.job_title || (employeeOfTheMonth?.role ? getRoleLabel(employeeOfTheMonth.role) : "-")}</p>
                     <span className="inline-block mt-1 text-[10.5px] font-bold text-[#facc15] font-mono">
                       🏆 أعلى تقييم أداء متكامل
                     </span>
@@ -514,9 +440,9 @@ export default function QualityPage() {
 
               <div className="mt-6 grid grid-cols-4 gap-2">
                 {[
-                  { label: "الجودة", value: `${employeeOfTheMonth?.quality_score || 9.6}/10`, color: "text-[#facc15]" },
-                  { label: "السرعة", value: `${employeeOfTheMonth?.speed_score || 9.2}/10`, color: "text-emerald-400" },
-                  { label: "مهام منجزة", value: `${employeeOfTheMonth?.completed_count || 36}`, color: "text-white" },
+                  { label: "الجودة", value: employeeOfTheMonth ? `${employeeOfTheMonth.quality_score}/10` : "0/10", color: "text-[#facc15]" },
+                  { label: "السرعة", value: employeeOfTheMonth ? `${employeeOfTheMonth.speed_score}/10` : "0/10", color: "text-emerald-400" },
+                  { label: "مهام منجزة", value: `${employeeOfTheMonth?.completed_count || 0}`, color: "text-white" },
                   { label: "التأخير", value: `${employeeOfTheMonth?.late_count || 0}`, color: "text-zinc-400" },
                 ].map((stat) => (
                   <div key={stat.label} className="rounded-xl bg-[#1c1c1f]/80 p-2.5 text-center border border-white/5 backdrop-blur-sm">
@@ -886,11 +812,7 @@ export default function QualityPage() {
                       </option>
                     ))
                   ) : (
-                    DEMO_REVIEWS.map((r) => (
-                      <option key={r.task_id} value={r.task_id}>
-                        {r.task?.title}
-                      </option>
-                    ))
+                    <option value="">لا توجد مهام متاحة للتقييم</option>
                   )}
                 </select>
               </Field>

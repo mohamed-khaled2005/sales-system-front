@@ -1,7 +1,11 @@
 import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  output: "standalone",
   images: { remotePatterns: [{ protocol: "https", hostname: "images.unsplash.com" }] },
-  experimental: { optimizePackageImports: ["lucide-react", "recharts"] },
+  experimental: {
+    cpus: 1,
+    optimizePackageImports: ["lucide-react", "recharts"],
+  },
 };
 export default nextConfig;

@@ -67,115 +67,11 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
-// Demo Fallback Data
-const DEMO_CLIENTS: Client[] = [
-  { id: 1, name: "شركة النور للتطوير العقاري", contact_phone: "+20 100 123 4567", primary_color: "#facc15", secondary_color: "#000", health_score: 95, status: "active" },
-  { id: 2, name: "مجموعة فودكو العالمية للأغذية", contact_phone: "+20 111 987 6543", primary_color: "#facc15", secondary_color: "#000", health_score: 92, status: "active" },
-  { id: 3, name: "مدارس النخبة الدولية", contact_phone: "+20 102 345 6789", primary_color: "#facc15", secondary_color: "#000", health_score: 88, status: "active" },
-  { id: 4, name: "براند إيليت للأزياء", contact_phone: "+20 120 555 7890", primary_color: "#facc15", secondary_color: "#000", health_score: 90, status: "active" },
-];
-
-const DEMO_PHOTOGRAPHERS: User[] = [
-  { id: 9, name: "طارق سليم", email: "tarek@agency.local", role: "photographer", job_title: "Director of Photography (DoP)", phone: "+20 101 222 3344" },
-  { id: 10, name: "زياد الشافعي", email: "ziad@agency.local", role: "photographer", job_title: "Senior Commercial Photographer", phone: "+20 102 333 4455" },
-  { id: 11, name: "حسام الدين", email: "hossam@agency.local", role: "production", job_title: "Production Assistant & Lighting Tech", phone: "+20 103 444 5566" },
-];
-
-const DEMO_SHOOTS: ProductionShoot[] = [
-  {
-    id: 1,
-    client_id: 1,
-    title: "تصوير فلل كمبوند النور بالعاصمة الإدارية (Ground & Drone)",
-    location: "العاصمة الإدارية الجديدة - كمبوند النور الحي السكني R7",
-    client_phone: "+20 100 123 4567",
-    scheduled_at: "2026-08-28T10:00:00",
-    photographer_id: 9,
-    assistant_id: 11,
-    vehicle: "سيارة الإنتاج فان رقم (أ ب ج 1928)",
-    team: ["طارق سليم (DoP)", "حسام الدين (مساعد وإضاءة)", "أحمد مصطفى (طيار درون)"],
-    equipment: ["Sony FX3 Cinema Camera", "Sony 24-70mm GM II", "DJI Mavic 3 Cine", "Aputure 600d Pro", "DJI RS3 Pro Gimbal"],
-    call_sheet: "التجمع في مقر الوكالة الساعة 08:30 ص، التحرك 09:00 ص، بدء التصوير الخارجي 10:00 ص ثم التصوير الداخلي للفلل النموذجية.",
-    status: "confirmed",
-    notes: "مطلوب تصوير 4 ريلز إعلانية + لقطات B-roll سينمائية مع إبراز التشطيبات الفاخرة.",
-    client: DEMO_CLIENTS[0],
-    photographer: DEMO_PHOTOGRAPHERS[0],
-    assistant: DEMO_PHOTOGRAPHERS[2],
-    reschedules: [],
-  },
-  {
-    id: 2,
-    client_id: 2,
-    title: "جلسة تصوير منيو الصيف وتصوير وجبات المطعم الجديد",
-    location: "فرع فودكو الرئيسي - التجمع الخامس شارع التسعين",
-    client_phone: "+20 111 987 6543",
-    scheduled_at: "2026-08-29T13:00:00",
-    photographer_id: 10,
-    assistant_id: 11,
-    vehicle: "سيارة سيدان خاصة",
-    team: ["زياد الشافعي (Commercial Photographer)", "حسام الدين (Styling & Lighting)"],
-    equipment: ["Sony A7IV", "Sony 90mm Macro Lens", "Godox Softboxes 120cm", "ColorChecker Passport", "Reflectors 5-in-1"],
-    call_sheet: "التواجد في المطعم الساعة 12:30 م لتجهيز زاوية التصوير وخلفيات الخشب وإضاءة الـ Food Photography.",
-    status: "scheduled",
-    notes: "تصوير 12 طبق رئيسي + 4 مشروبات صيفية منعشة بجودة 4K للبوستات والمينيو الرقمي.",
-    client: DEMO_CLIENTS[1],
-    photographer: DEMO_PHOTOGRAPHERS[1],
-    assistant: DEMO_PHOTOGRAPHERS[2],
-    reschedules: [],
-  },
-  {
-    id: 3,
-    client_id: 3,
-    title: "تصوير لقاءات الطلاب والمرافق التعليمية (Back to School)",
-    location: "مبنى مدارس النخبة الدولية - المعادي",
-    client_phone: "+20 102 345 6789",
-    scheduled_at: "2026-08-30T09:30:00",
-    photographer_id: 9,
-    assistant_id: 11,
-    vehicle: "سيارة الإنتاج فان",
-    team: ["طارق سليم (DoP)", "حسام الدين (Audio Tech)"],
-    equipment: ["Sony FX3", "DJI Mic 2 Wireless Mics", "Sony 35mm f/1.4 GM", "Rode VideoMic Pro+"],
-    call_sheet: "مقابلة مدير المدرسة والتقاط لقطات الفصول والمختبرات وملاعب التنس والمسرح.",
-    status: "in_progress",
-    notes: "تسجيل 3 لقاءات صوتية عالية النقاء مع عزل الضوضاء المحيطة.",
-    client: DEMO_CLIENTS[2],
-    photographer: DEMO_PHOTOGRAPHERS[0],
-    assistant: DEMO_PHOTOGRAPHERS[2],
-    reschedules: [
-      { id: 1, shoot_id: 3, previous_scheduled_at: "2026-08-27T09:30:00", new_scheduled_at: "2026-08-30T09:30:00", requested_by: 1, reason: "تأجيل بناء على طلب إدارة المدرسة لانتهاء أعمال دهانات المسرح", created_at: "2026-08-25T12:00:00", requester: { id: 1, name: "يوسف إبراهيم", email: "youssef@agency.local", role: "ceo" } }
-    ],
-  },
-  {
-    id: 4,
-    client_id: 4,
-    title: "فوتوسيشن كولكشن الخريف مع عارضات الأزياء (Studio Fashion)",
-    location: "استوديو الوكالة الرئيسي - New Cairo Studio A",
-    client_phone: "+20 120 555 7890",
-    scheduled_at: "2026-08-25T15:00:00",
-    photographer_id: 10,
-    assistant_id: 11,
-    team: ["زياد الشافعي (Fashion Photographer)", "سارة المنشاوي (Creative Director)", "حسام الدين (Studio Lighting)"],
-    equipment: ["Sony A7IV", "Sony 85mm f/1.4 GM", "Profoto B10X Plus Strobes", "Beauty Dish 70cm", "Smoke Machine"],
-    call_sheet: "بدء الميكب والـ Styling الساعة 01:30 م، بدء جلسة التصوير 03:00 م.",
-    raw_files: ["https://drive.google.com/drive/folders/demo-elite-autumn-raw"],
-    status: "completed",
-    notes: "تم إنجاز وتصوير 25 طقم كامل وتسليم الفايلات الخام لوحدة المونتاج والريتاتش.",
-    client: DEMO_CLIENTS[3],
-    photographer: DEMO_PHOTOGRAPHERS[1],
-    assistant: DEMO_PHOTOGRAPHERS[2],
-    reschedules: [],
-  },
-];
-
-const DEMO_EQUIPMENT = [
-  { id: 1, name: "Sony FX3 Cinema Camera", category: "كاميرات سينمائية", status: "in_use", shoot_title: "تصوير كمبوند النور", assigned_to: "طارق سليم" },
-  { id: 2, name: "Sony A7IV Mirrorless Camera", category: "كاميرات فوتوغرافية وفيديو", status: "in_use", shoot_title: "تصوير منيو فودكو", assigned_to: "زياد الشافعي" },
-  { id: 3, name: "Sony FE 24-70mm f/2.8 GM II", category: "عدسات زووم أساسية", status: "in_use", shoot_title: "تصوير كمبوند النور", assigned_to: "طارق سليم" },
-  { id: 4, name: "Sony FE 90mm f/2.8 Macro G", category: "عدسات ماكرو للطعام والمنتجات", status: "available" },
-  { id: 5, name: "DJI Mavic 3 Cine Drone", category: "طائرات درون تصوير جوي", status: "available" },
-  { id: 6, name: "Aputure LS 600d Pro Light Storm", category: "إضاءات استوديو قوية", status: "in_use", shoot_title: "تصوير كمبوند النور", assigned_to: "حسام الدين" },
-  { id: 7, name: "DJI Mic 2 Wireless Microphone System", category: "أنظمة مايكات لاسلكية", status: "available" },
-  { id: 8, name: "DJI RS3 Pro Gimbal Stabilizer", category: "مثبتات ومعدات حركية", status: "available" },
-];
+// Empty Fallback Data
+const DEMO_CLIENTS: Client[] = [];
+const DEMO_PHOTOGRAPHERS: User[] = [];
+const DEMO_SHOOTS: ProductionShoot[] = [];
+const DEMO_EQUIPMENT: any[] = [];
 
 export default function ProductionPage() {
   const { user } = useAuth();
@@ -191,10 +87,10 @@ export default function ProductionPage() {
   const [loading, setLoading] = useState(false);
 
   // Entities Data
-  const [shoots, setShoots] = useState<ProductionShoot[]>(DEMO_SHOOTS);
-  const [clients, setClients] = useState<Client[]>(DEMO_CLIENTS);
-  const [photographers, setPhotographers] = useState<User[]>(DEMO_PHOTOGRAPHERS);
-  const [equipmentList, setEquipmentList] = useState(DEMO_EQUIPMENT);
+  const [shoots, setShoots] = useState<ProductionShoot[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [photographers, setPhotographers] = useState<User[]>([]);
+  const [equipmentList, setEquipmentList] = useState<any[]>([]);
 
   // Modals
   const [createOpen, setCreateOpen] = useState(false);
@@ -204,11 +100,11 @@ export default function ProductionPage() {
   const [historyModal, setHistoryModal] = useState<ProductionShoot | null>(null);
 
   // Booking Form State
-  const [selectedClientId, setSelectedClientId] = useState<number>(DEMO_CLIENTS[0]?.id || 1);
-  const [clientPhone, setClientPhone] = useState<string>(DEMO_CLIENTS[0]?.contact_phone || "");
+  const [selectedClientId, setSelectedClientId] = useState<number | undefined>(undefined);
+  const [clientPhone, setClientPhone] = useState<string>("");
   const [scheduledAt, setScheduledAt] = useState<string>("");
-  const [photographerId, setPhotographerId] = useState<number | undefined>(DEMO_PHOTOGRAPHERS[0]?.id);
-  const [assistantId, setAssistantId] = useState<number | undefined>(DEMO_PHOTOGRAPHERS[2]?.id);
+  const [photographerId, setPhotographerId] = useState<number | undefined>(undefined);
+  const [assistantId, setAssistantId] = useState<number | undefined>(undefined);
   const [shootTitle, setShootTitle] = useState<string>("");
   const [shootLocation, setShootLocation] = useState<string>("استوديو الوكالة الرئيسي - New Cairo Studio");
   const [vehicle, setVehicle] = useState<string>("سيارة الإنتاج فان");
@@ -233,15 +129,31 @@ export default function ProductionPage() {
       // 1. Fetch Shoots
       api<Paginated<ProductionShoot>>("/production/shoots?per_page=100")
         .then((res) => {
-          if (res?.data && Array.isArray(res.data) && res.data.length) setShoots(res.data);
+          if (res?.data && Array.isArray(res.data)) setShoots(res.data);
+          else setShoots([]);
         })
-        .catch(() => {});
+        .catch(() => { setShoots([]); });
 
       // 2. Fetch Availability and Photographers
       api<{ shoots: ProductionShoot[]; photographers: User[] }>("/production/calendar-availability")
         .then((res) => {
           if (res?.photographers && Array.isArray(res.photographers) && res.photographers.length) {
             setPhotographers(res.photographers);
+            if (!photographerId && res.photographers[0]) {
+              setPhotographerId(res.photographers[0].id);
+            }
+          }
+        })
+        .catch(() => {});
+
+      api<User[]>("/users")
+        .then((res) => {
+          if (Array.isArray(res)) {
+            const ph = res.filter((u) => u.role === "photographer" || u.role === "production");
+            if (ph.length) {
+              setPhotographers(ph);
+              setPhotographerId(ph[0].id);
+            }
           }
         })
         .catch(() => {});
@@ -250,15 +162,13 @@ export default function ProductionPage() {
       api<Paginated<Client> | Client[]>("/clients?per_page=100")
         .then((res: any) => {
           const list = res?.data || (Array.isArray(res) ? res : []);
-          if (list.length) {
-            setClients(list);
-            if (!selectedClientId && list[0]) {
-              setSelectedClientId(list[0].id);
-              setClientPhone(list[0].contact_phone || "");
-            }
+          setClients(list);
+          if (list[0]) {
+            setSelectedClientId(list[0].id);
+            setClientPhone(list[0].contact_phone || "");
           }
         })
-        .catch(() => {});
+        .catch(() => { setClients([]); });
     } finally {
       setLoading(false);
     }
@@ -314,10 +224,9 @@ export default function ProductionPage() {
         return;
       }
 
-      // Demo fallback
-      const targetClient = clients.find((c) => c.id === payload.client_id) || DEMO_CLIENTS[0];
-      const targetPhotographer = photographers.find((p) => p.id === payload.photographer_id) || DEMO_PHOTOGRAPHERS[0];
-      const targetAssistant = photographers.find((p) => p.id === payload.assistant_id) || DEMO_PHOTOGRAPHERS[2];
+      const targetClient = clients.find((c) => c.id === payload.client_id) || clients[0];
+      const targetPhotographer = photographers.find((p) => p.id === payload.photographer_id) || photographers[0];
+      const targetAssistant = photographers.find((p) => p.id === payload.assistant_id);
 
       const newShoot: ProductionShoot = {
         id: Date.now(),

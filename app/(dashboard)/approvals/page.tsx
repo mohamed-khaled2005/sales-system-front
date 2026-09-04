@@ -9,7 +9,6 @@ import { Modal } from "@/components/ui/modal";
 import { SectionHeader } from "@/components/ui/section-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { api } from "@/lib/api";
-import { mockTasks } from "@/lib/mock-data";
 import { getRoleLabel } from "@/lib/roles";
 import type { Client, Metric, Paginated, Task, User } from "@/lib/types";
 import {
@@ -62,7 +61,7 @@ export default function ApprovalsPage() {
   const [activeTab, setActiveTab] = useState<"art_review" | "client_review" | "approved_archive">("art_review");
 
   // Data States
-  const [tasks, setTasks] = useState<Task[]>(mockTasks);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -109,13 +108,15 @@ export default function ApprovalsPage() {
         api<Paginated<Client> | Client[]>("/clients?per_page=100"),
       ]);
 
-      if (tasksRes?.data && Array.isArray(tasksRes.data) && tasksRes.data.length) {
+      if (tasksRes?.data && Array.isArray(tasksRes.data)) {
         setTasks(tasksRes.data);
+      } else {
+        setTasks([]);
       }
       const clientList = (clientsRes as any)?.data || (Array.isArray(clientsRes) ? clientsRes : []);
-      if (clientList.length) setClients(clientList);
+      setClients(clientList);
     } catch {
-      setTasks(mockTasks);
+      setTasks([]);
     } finally {
       setLoading(false);
     }

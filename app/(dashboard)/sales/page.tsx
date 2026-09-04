@@ -9,7 +9,6 @@ import { Modal } from "@/components/ui/modal";
 import { SectionHeader } from "@/components/ui/section-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { api } from "@/lib/api";
-import { mockClients, mockLeads } from "@/lib/mock-data";
 import type { Client, Lead, Metric, Package, PackageNegotiation, Paginated, PersonalReminder, User } from "@/lib/types";
 import { money, statusLabel } from "@/lib/utils";
 import {
@@ -54,8 +53,8 @@ const temperatures = {
 
 export default function SalesPage() {
   const { user } = useAuth();
-  const [leads, setLeads] = useState<Lead[]>(mockLeads);
-  const [clients, setClients] = useState<Client[]>(mockClients);
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
   const [negotiations, setNegotiations] = useState<PackageNegotiation[]>([]);
   const [reminders, setReminders] = useState<PersonalReminder[]>([]);
   const [salesTeam, setSalesTeam] = useState<User[]>([]);
@@ -91,7 +90,9 @@ export default function SalesPage() {
       ]);
 
       if (leadsRes?.data) setLeads(leadsRes.data);
+      else setLeads([]);
       if (clientsRes?.data) setClients(clientsRes.data);
+      else setClients([]);
       if (negsRes?.data) setNegotiations(negsRes.data);
       if (remindersRes?.data) setReminders(remindersRes.data);
       if (pkgsRes && Array.isArray(pkgsRes)) setPackages(pkgsRes);
@@ -100,8 +101,8 @@ export default function SalesPage() {
         setSalesTeam(usersRes.filter((u) => u.role === "sales" || u.role === "sales_leader"));
       }
     } catch {
-      setLeads(mockLeads);
-      setClients(mockClients);
+      setLeads([]);
+      setClients([]);
     } finally {
       setLoading(false);
     }

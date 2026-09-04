@@ -8,7 +8,6 @@ import { ProgressRing } from "@/components/ui/progress-ring";
 import { SectionHeader } from "@/components/ui/section-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { api } from "@/lib/api";
-import { mockClients } from "@/lib/mock-data";
 import type { Client, Metric, Paginated, User } from "@/lib/types";
 import { money } from "@/lib/utils";
 import {
@@ -28,7 +27,7 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 export default function ClientsPage() {
-  const [clients, setClients] = useState<Client[]>(mockClients);
+  const [clients, setClients] = useState<Client[]>([]);
   const [accountManagers, setAccountManagers] = useState<User[]>([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "on_hold" | "closed">("all");
@@ -46,9 +45,10 @@ export default function ClientsPage() {
         api<User[]>("/users"),
       ]);
       if (clientsRes?.data) setClients(clientsRes.data);
+      else setClients([]);
       if (usersRes) setAccountManagers(usersRes);
     } catch {
-      setClients(mockClients);
+      setClients([]);
     } finally {
       setLoading(false);
     }

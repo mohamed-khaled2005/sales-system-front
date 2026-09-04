@@ -7,7 +7,7 @@ import { MetricCard } from "@/components/ui/metric-card";
 import { Modal } from "@/components/ui/modal";
 import { PackageBadge, StatusBadge } from "@/components/ui/status-badge";
 import { api } from "@/lib/api";
-import { mockClients, mockDashboard, mockLeads } from "@/lib/mock-data";
+import { mockDashboard } from "@/lib/mock-data";
 import type { AutomaticDeductionRule, Client, DashboardData, EmployeeRequest, Lead, Role, User } from "@/lib/types";
 import { money } from "@/lib/utils";
 import {
@@ -52,7 +52,7 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const fallback = useMemo(() => mockDashboard(user?.role), [user?.role]);
   const [data, setData] = useState<DashboardData>(fallback);
-  const [leads, setLeads] = useState<Lead[]>(mockLeads);
+  const [leads, setLeads] = useState<Lead[]>([]);
   const [usersList, setUsersList] = useState<User[]>([]);
   const [employeeRequests, setEmployeeRequests] = useState<EmployeeRequest[]>([]);
   const [deductionRules, setDeductionRules] = useState<AutomaticDeductionRule[]>([]);
@@ -95,7 +95,7 @@ export default function DashboardPage() {
       }
     } catch {
       setData(fallback);
-      setLeads(mockLeads);
+      setLeads([]);
     } finally {
       setLoading(false);
     }
@@ -396,11 +396,11 @@ export default function DashboardPage() {
             </h3>
             <div className="grid grid-cols-3 divide-x divide-white/7 text-center">
               <div className="px-2">
-                <strong className="block text-2xl font-black text-[#facc15]">{data.tasks?.length ?? 18}</strong>
+                <strong className="block text-2xl font-black text-[#facc15]">{data.tasks?.reduce((acc, t) => acc + (t.count || 0), 0) ?? 0}</strong>
                 <span className="mt-0.5 block text-[9px] font-bold tracking-wider text-zinc-500 uppercase">TASKS ACTIVE</span>
               </div>
               <div className="px-2">
-                <strong className="block text-2xl font-black text-white">{usersList.length || 16}</strong>
+                <strong className="block text-2xl font-black text-white">{usersList.length}</strong>
                 <span className="mt-0.5 block text-[9px] font-bold tracking-wider text-zinc-500 uppercase">TEAM MEMBERS</span>
               </div>
               <div className="px-2">
@@ -416,15 +416,15 @@ export default function DashboardPage() {
               <span className="text-[10px] font-bold tracking-widest text-zinc-400 uppercase">Q3 REVENUE TARGET</span>
             </div>
             <div className="mt-2 flex items-baseline justify-between">
-              <span className="text-xs font-semibold text-zinc-400">Target: $180k</span>
-              <strong className="text-3xl font-black text-[#facc15]">$125,000</strong>
+              <span className="text-xs font-semibold text-zinc-400">Target: $0</span>
+              <strong className="text-3xl font-black text-[#facc15]">$0</strong>
             </div>
             <div className="mt-3.5 h-2 w-full overflow-hidden rounded-full bg-zinc-800">
-              <div className="h-full rounded-full bg-[#facc15] transition-all duration-700" style={{ width: "70%" }} />
+              <div className="h-full rounded-full bg-[#facc15] transition-all duration-700" style={{ width: "0%" }} />
             </div>
             <div className="mt-3 flex items-center justify-between text-[10px] font-bold text-zinc-400">
-              <span>$55k REMAINING</span>
-              <span className="text-zinc-200">70% PROGRESS</span>
+              <span>$0 REMAINING</span>
+              <span className="text-zinc-200">0% PROGRESS</span>
             </div>
           </article>
 

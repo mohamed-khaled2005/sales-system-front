@@ -5,7 +5,6 @@ import { Field, inputClass, PrimaryButton, SecondaryButton, textareaClass } from
 import { Modal } from "@/components/ui/modal";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { api } from "@/lib/api";
-import { mockClients } from "@/lib/mock-data";
 import type { Brief, Client, ClientPublishApproval, Package, ProductionShoot, Task, User } from "@/lib/types";
 import { money } from "@/lib/utils";
 import {
@@ -49,15 +48,14 @@ import { toast } from "sonner";
 
 export default function ClientProfilePage() {
   const params = useParams<{ id: string }>();
-  const fallback =
-    mockClients.find((c) => c.id === Number(params.id)) ?? {
-      ...mockClients[0],
-      name: "TechNova Solutions",
-      industry: "Technology",
-      contact_name: "Ahmed Al-Farsi",
-      contact_phone: "+971 50 123 4567",
-      contact_email: "ahmed@technova.com",
-    };
+  const fallback: Client = {
+    id: Number(params.id) || 0,
+    name: "",
+    industry: "",
+    primary_color: "#facc15",
+    secondary_color: "#000",
+    status: "active",
+  };
 
   const [client, setClient] = useState<Client>(fallback);
   const [packages, setPackages] = useState<Package[]>([]);

@@ -7,7 +7,6 @@ import { Field, inputClass, PrimaryButton, SecondaryButton, textareaClass } from
 import { Modal } from "@/components/ui/modal";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { api } from "@/lib/api";
-import { mockClients, mockTasks } from "@/lib/mock-data";
 import type { Client, Paginated, Task, User } from "@/lib/types";
 import {
   AlertTriangle,
@@ -38,8 +37,8 @@ import { toast } from "sonner";
 
 export default function TasksPage() {
   const { user } = useAuth();
-  const [tasks, setTasks] = useState<Task[]>(mockTasks);
-  const [clients, setClients] = useState<Client[]>(mockClients);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
   const [team, setTeam] = useState<User[]>([]);
   const [selected, setSelected] = useState<Task | null>(null);
   const [search, setSearch] = useState("");
@@ -58,21 +57,17 @@ export default function TasksPage() {
         api<Paginated<Client>>("/clients?per_page=100"),
         api<User[]>("/users"),
       ]);
-      if (tasksRes?.data && tasksRes.data.length > 0) {
+      if (tasksRes?.data) {
         setTasks(tasksRes.data);
-        if (typeof window !== "undefined") localStorage.setItem("agency_tasks", JSON.stringify(tasksRes.data));
       } else {
-        const saved = typeof window !== "undefined" ? localStorage.getItem("agency_tasks") : null;
-        if (saved) setTasks(JSON.parse(saved));
-        else setTasks(mockTasks);
+        setTasks([]);
       }
       if (clientsRes?.data) setClients(clientsRes.data);
+      else setClients([]);
       if (usersRes) setTeam(usersRes);
     } catch {
-      const saved = typeof window !== "undefined" ? localStorage.getItem("agency_tasks") : null;
-      if (saved) setTasks(JSON.parse(saved));
-      else setTasks(mockTasks);
-      setClients(mockClients);
+      setTasks([]);
+      setClients([]);
     } finally {
       setRefreshing(false);
     }

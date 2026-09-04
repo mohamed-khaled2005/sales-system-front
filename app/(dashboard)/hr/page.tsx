@@ -64,63 +64,14 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
-// Demo Fallback Data
-const DEMO_USERS: User[] = [
-  { id: 1, name: "يوسف إبراهيم", email: "youssef@agency.local", role: "ceo", job_title: "Chief Executive Officer" },
-  { id: 2, name: "سارة المنشاوي", email: "sara@agency.local", role: "sales_leader", job_title: "Head of Sales" },
-  { id: 3, name: "أحمد عبد الله", email: "ahmed@agency.local", role: "media_buyer", job_title: "Senior Media Buyer" },
-  { id: 4, name: "كريم فهمي", email: "karim@agency.local", role: "designer", job_title: "Lead Graphic Designer" },
-  { id: 5, name: "مي زكي", email: "mai@agency.local", role: "video_editor", job_title: "Senior Video Editor" },
-  { id: 6, name: "عمر شريف", email: "omar@agency.local", role: "account_manager", job_title: "Key Account Manager" },
-  { id: 7, name: "نورهان علي", email: "nourhan@agency.local", role: "hr", job_title: "People & Culture Lead" },
-  { id: 8, name: "محمود حسن", email: "mahmoud@agency.local", role: "copywriter", job_title: "Content & Copy Lead" },
-];
-
-const DEMO_ATTENDANCE: AttendanceRecord[] = [
-  { id: 1, user_id: 1, date: new Date().toISOString().split("T")[0], check_in: "08:45:00", check_out: "17:30:00", status: "present", minutes_late: 0, user: DEMO_USERS[0] },
-  { id: 2, user_id: 2, date: new Date().toISOString().split("T")[0], check_in: "08:55:00", check_out: "17:00:00", status: "present", minutes_late: 0, user: DEMO_USERS[1] },
-  { id: 3, user_id: 3, date: new Date().toISOString().split("T")[0], check_in: "09:28:00", check_out: null, status: "late", minutes_late: 28, notes: "عطل في المترو", user: DEMO_USERS[2] },
-  { id: 4, user_id: 4, date: new Date().toISOString().split("T")[0], check_in: "09:05:00", check_out: null, status: "present", minutes_late: 5, user: DEMO_USERS[3] },
-  { id: 5, user_id: 5, date: new Date().toISOString().split("T")[0], check_in: "09:40:00", check_out: null, status: "late", minutes_late: 40, user: DEMO_USERS[4] },
-  { id: 6, user_id: 6, date: new Date().toISOString().split("T")[0], check_in: null, check_out: null, status: "absent", minutes_late: 0, notes: "إجازة مرضية معتمدة", user: DEMO_USERS[5] },
-  { id: 7, user_id: 7, date: new Date().toISOString().split("T")[0], check_in: "08:50:00", check_out: null, status: "present", minutes_late: 0, user: DEMO_USERS[6] },
-  { id: 8, user_id: 8, date: new Date().toISOString().split("T")[0], check_in: "09:12:00", check_out: null, status: "present", minutes_late: 12, user: DEMO_USERS[7] },
-];
-
-const DEMO_LEAVES: LeaveRequestItem[] = [
-  { id: 1, user_id: 6, type: "إجازة مرضية", starts_at: "2026-08-25", ends_at: "2026-08-27", days: 3, reason: "وعكة صحية طارئة ومراجعة الطبيب", status: "pending", user: DEMO_USERS[5] },
-  { id: 2, user_id: 3, type: "إجازة سنوية", starts_at: "2026-09-01", ends_at: "2026-09-05", days: 5, reason: "إجازة الصيف السنوية", status: "approved", reviewed_by: 1, reviewed_at: "2026-08-24", user: DEMO_USERS[2], reviewer: DEMO_USERS[0] },
-  { id: 3, user_id: 4, type: "إجازة عارضة", starts_at: "2026-08-18", ends_at: "2026-08-18", days: 1, reason: "ظرف عائلي مفاجئ", status: "approved", reviewed_by: 7, reviewed_at: "2026-08-18", user: DEMO_USERS[3], reviewer: DEMO_USERS[6] },
-];
-
-const DEMO_PAYROLLS: PayrollItem[] = [
-  { id: 1, user_id: 1, period_month: "2026-08-01", base_salary: 45000, bonuses: 5000, commissions: 0, deductions: 0, net_salary: 50000, status: "approved", payment_reference: "PAY-202608-001", user: DEMO_USERS[0] },
-  { id: 2, user_id: 2, period_month: "2026-08-01", base_salary: 22000, bonuses: 2000, commissions: 14500, deductions: 0, net_salary: 38500, status: "approved", payment_reference: "PAY-202608-002", user: DEMO_USERS[1] },
-  { id: 3, user_id: 3, period_month: "2026-08-01", base_salary: 18000, bonuses: 1500, commissions: 0, deductions: 450, net_salary: 19050, status: "draft", user: DEMO_USERS[2] },
-  { id: 4, user_id: 4, period_month: "2026-08-01", base_salary: 16000, bonuses: 1000, commissions: 0, deductions: 0, net_salary: 17000, status: "paid", paid_at: "2026-08-26", payment_reference: "TXN-8849102", user: DEMO_USERS[3] },
-  { id: 5, user_id: 5, period_month: "2026-08-01", base_salary: 15000, bonuses: 1200, commissions: 0, deductions: 300, net_salary: 15900, status: "draft", user: DEMO_USERS[4] },
-];
-
-const DEMO_CONTRACTS: EmployeeContractItem[] = [
-  { id: 1, user_id: 1, contract_type: "full_time", starts_at: "2024-01-01", ends_at: null, base_salary: 45000, currency: "EGP", status: "active", notes: "عقد إدارة تنفيذي غير محدد المدة", user: DEMO_USERS[0] },
-  { id: 2, user_id: 2, contract_type: "full_time", starts_at: "2024-06-01", ends_at: "2027-05-31", base_salary: 22000, currency: "EGP", status: "active", notes: "عقد قيادة مبيعات مع نسبة عمولة", user: DEMO_USERS[1] },
-  { id: 3, user_id: 3, contract_type: "full_time", starts_at: "2025-01-15", ends_at: "2026-01-14", base_salary: 18000, currency: "EGP", status: "active", notes: "مسؤول إعلانات وحملات ترويجية", user: DEMO_USERS[2] },
-  { id: 4, user_id: 4, contract_type: "full_time", starts_at: "2025-03-01", ends_at: "2026-02-28", base_salary: 16000, currency: "EGP", status: "active", user: DEMO_USERS[3] },
-  { id: 5, user_id: 5, contract_type: "freelance", starts_at: "2026-02-01", ends_at: "2026-08-31", base_salary: 15000, currency: "EGP", status: "active", notes: "عقد إنتاج ومونتاج فيديو فريلانس", user: DEMO_USERS[4] },
-];
-
-const DEMO_ADJUSTMENTS: EmployeeAdjustment[] = [
-  { id: 1, user_id: 2, type: "bonus", amount: 2000, effective_date: "2026-08-20", reason: "مكافأة تجاوز التارجت البيعي الشهري", user: DEMO_USERS[1], creator: DEMO_USERS[0] },
-  { id: 2, user_id: 3, type: "penalty", amount: 450, effective_date: "2026-08-22", reason: "تكرار التأخير الصباحي لأكثر من 3 مرات", user: DEMO_USERS[2], creator: DEMO_USERS[6] },
-  { id: 3, user_id: 4, type: "allowance", amount: 1000, effective_date: "2026-08-15", reason: "بدل انتقال وجلسة تصوير خارجية", user: DEMO_USERS[3], creator: DEMO_USERS[6] },
-  { id: 4, user_id: 5, type: "deduction", amount: 300, effective_date: "2026-08-23", reason: "خصم تأخير تسليم مسودة المونتاج", user: DEMO_USERS[4], creator: DEMO_USERS[6] },
-];
-
-const DEMO_RULES: AutomaticDeductionRule[] = [
-  { id: 1, name: "خصم التأخير الصباحي (> 15 دقيقة)", event_type: "late_attendance", deduction_type: "fixed", amount: 100, threshold_minutes: 15, is_active: true, description: "يتم تطبيق خصم 100 ج تلقائياً عند تجاوز التأخير الصباحي 15 دقيقة بدون إذن." },
-  { id: 2, name: "خصم تفويت موعد التسليم (Missed Deadline)", event_type: "missed_deadline", deduction_type: "fixed", amount: 200, threshold_minutes: 60, is_active: true, description: "خصم 200 ج عند تفويت موعد تسليم المهمة الفنية عن الموعد النهائي المحدد." },
-  { id: 3, name: "خصم الغياب بدون إذن مسبق", event_type: "unexcused_absence", deduction_type: "fixed", amount: 350, threshold_minutes: 1, is_active: true, description: "خصم يوم عمل ونصف عند الغياب الكامل غير المبرر." },
-];
+// Empty Fallback Data
+const DEMO_USERS: User[] = [];
+const DEMO_ATTENDANCE: AttendanceRecord[] = [];
+const DEMO_LEAVES: LeaveRequestItem[] = [];
+const DEMO_PAYROLLS: PayrollItem[] = [];
+const DEMO_CONTRACTS: EmployeeContractItem[] = [];
+const DEMO_ADJUSTMENTS: EmployeeAdjustment[] = [];
+const DEMO_RULES: AutomaticDeductionRule[] = [];
 
 export default function HRPage() {
   const { user } = useAuth();
@@ -137,13 +88,13 @@ export default function HRPage() {
   const [loading, setLoading] = useState(false);
 
   // Entities Data States
-  const [users, setUsers] = useState<User[]>(DEMO_USERS);
-  const [attendances, setAttendances] = useState<AttendanceRecord[]>(DEMO_ATTENDANCE);
-  const [leaves, setLeaves] = useState<LeaveRequestItem[]>(DEMO_LEAVES);
-  const [payrolls, setPayrolls] = useState<PayrollItem[]>(DEMO_PAYROLLS);
-  const [contracts, setContracts] = useState<EmployeeContractItem[]>(DEMO_CONTRACTS);
-  const [adjustments, setAdjustments] = useState<EmployeeAdjustment[]>(DEMO_ADJUSTMENTS);
-  const [rules, setRules] = useState<AutomaticDeductionRule[]>(DEMO_RULES);
+  const [users, setUsers] = useState<User[]>([]);
+  const [attendances, setAttendances] = useState<AttendanceRecord[]>([]);
+  const [leaves, setLeaves] = useState<LeaveRequestItem[]>([]);
+  const [payrolls, setPayrolls] = useState<PayrollItem[]>([]);
+  const [contracts, setContracts] = useState<EmployeeContractItem[]>([]);
+  const [adjustments, setAdjustments] = useState<EmployeeAdjustment[]>([]);
+  const [rules, setRules] = useState<AutomaticDeductionRule[]>([]);
   const [historyLogs, setHistoryLogs] = useState<DeductionEventLogItem[]>([]);
 
   // Modals States
@@ -165,43 +116,43 @@ export default function HRPage() {
     try {
       // 1. Fetch Users
       api<User[]>("/users")
-        .then((res) => { if (Array.isArray(res) && res.length) setUsers(res); })
+        .then((res) => { if (Array.isArray(res)) setUsers(res); })
         .catch(() => {});
 
       // 2. Fetch Attendance
       api<Paginated<AttendanceRecord>>(`/hr/attendance?date=${selectedDate}&per_page=100`)
-        .then((res) => { if (res?.data) setAttendances(res.data); })
-        .catch(() => {});
+        .then((res) => { if (res?.data) setAttendances(res.data); else setAttendances([]); })
+        .catch(() => { setAttendances([]); });
 
       // 3. Fetch Leaves
       api<Paginated<LeaveRequestItem>>("/hr/leaves?per_page=100")
-        .then((res) => { if (res?.data) setLeaves(res.data); })
-        .catch(() => {});
+        .then((res) => { if (res?.data) setLeaves(res.data); else setLeaves([]); })
+        .catch(() => { setLeaves([]); });
 
       // 4. Fetch Payrolls
       api<Paginated<PayrollItem>>(`/hr/payrolls?month=${selectedMonth}&per_page=100`)
-        .then((res) => { if (res?.data) setPayrolls(res.data); })
-        .catch(() => {});
+        .then((res) => { if (res?.data) setPayrolls(res.data); else setPayrolls([]); })
+        .catch(() => { setPayrolls([]); });
 
       // 5. Fetch Contracts
       api<Paginated<EmployeeContractItem>>("/hr/contracts?per_page=100")
-        .then((res) => { if (res?.data) setContracts(res.data); })
-        .catch(() => {});
+        .then((res) => { if (res?.data) setContracts(res.data); else setContracts([]); })
+        .catch(() => { setContracts([]); });
 
       // 6. Fetch Adjustments
       api<Paginated<EmployeeAdjustment>>("/hr/adjustments?per_page=100")
-        .then((res) => { if (res?.data) setAdjustments(res.data); })
-        .catch(() => {});
+        .then((res) => { if (res?.data) setAdjustments(res.data); else setAdjustments([]); })
+        .catch(() => { setAdjustments([]); });
 
       // 7. Fetch Rules
       api<AutomaticDeductionRule[]>("/hr/deductions/rules")
-        .then((res) => { if (Array.isArray(res)) setRules(res); })
-        .catch(() => {});
+        .then((res) => { if (Array.isArray(res)) setRules(res); else setRules([]); })
+        .catch(() => { setRules([]); });
 
       // 8. Fetch History
       api<Paginated<DeductionEventLogItem>>("/hr/deductions/history?per_page=100")
-        .then((res) => { if (res?.data) setHistoryLogs(res.data); })
-        .catch(() => {});
+        .then((res) => { if (res?.data) setHistoryLogs(res.data); else setHistoryLogs([]); })
+        .catch(() => { setHistoryLogs([]); });
     } finally {
       setLoading(false);
     }
@@ -306,7 +257,7 @@ export default function HRPage() {
       refreshData();
     } catch (e: any) {
       // Demo fallback
-      const targetUser = users.find((u) => u.id === payload.user_id) || DEMO_USERS[0];
+      const targetUser = users.find((u) => u.id === payload.user_id) || users[0] || (user as User);
       const newRec: AttendanceRecord = {
         id: editingAttendance?.id || Date.now(),
         ...payload,
@@ -342,7 +293,7 @@ export default function HRPage() {
       setLeaveModalOpen(false);
       refreshData();
     } catch (e: any) {
-      const targetUser = users.find((u) => u.id === payload.user_id) || user || DEMO_USERS[0];
+      const targetUser = users.find((u) => u.id === payload.user_id) || (user as User) || users[0];
       const newLeave: LeaveRequestItem = {
         id: Date.now(),
         ...payload,
@@ -386,7 +337,7 @@ export default function HRPage() {
       setEditingPayroll(null);
       refreshData();
     } catch (e: any) {
-      const targetUser = users.find((u) => u.id === payload.user_id) || DEMO_USERS[0];
+      const targetUser = users.find((u) => u.id === payload.user_id) || users[0] || (user as User);
       const newPay: PayrollItem = {
         id: editingPayroll?.id || Date.now(),
         ...payload,
@@ -424,7 +375,7 @@ export default function HRPage() {
       setContractModalOpen(false);
       refreshData();
     } catch (e: any) {
-      const targetUser = users.find((u) => u.id === payload.user_id) || DEMO_USERS[0];
+      const targetUser = users.find((u) => u.id === payload.user_id) || users[0] || (user as User);
       const newContract: EmployeeContractItem = {
         id: Date.now(),
         ...payload,
@@ -458,7 +409,7 @@ export default function HRPage() {
       setAdjustmentModalOpen(false);
       refreshData();
     } catch (e: any) {
-      const targetUser = users.find((u) => u.id === payload.user_id) || DEMO_USERS[0];
+      const targetUser = users.find((u) => u.id === payload.user_id) || users[0] || (user as User);
       const newAdj: EmployeeAdjustment = {
         id: Date.now(),
         ...payload,
