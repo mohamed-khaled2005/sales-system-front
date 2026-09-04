@@ -55,6 +55,7 @@ export default function ClientProfilePage() {
     primary_color: "#facc15",
     secondary_color: "#000",
     status: "active",
+    health_score: 100,
   };
 
   const [client, setClient] = useState<Client>(fallback);

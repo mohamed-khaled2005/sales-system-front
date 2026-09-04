@@ -155,7 +155,7 @@ export default function PackagesPage() {
       // Optimistic demo
       const newNeg: PackageNegotiation = {
         id: Date.now(),
-        client_id: selectedClientId,
+        client_id: selectedClientId || 0,
         package_id: negotiatingPackage.id,
         salesperson_id: user?.id || 1,
         original_price: negotiatingPackage.monthly_price,
