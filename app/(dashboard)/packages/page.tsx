@@ -362,7 +362,7 @@ export default function PackagesPage() {
                       {money(Number(pkg.monthly_price))}
                     </strong>
                     <span className="text-[10px] text-zinc-500 mt-1 block">
-                      العمولة المقدرة: {money(Number(pkg.monthly_price) * ((user?.commission_percentage ?? 10) / 100))} ({user?.commission_percentage ?? 10}%)
+                      العمولة المقدرة: {money(Number(pkg.monthly_price) * (Number(user?.commission_percentage || 0) / 100))} ({Number(user?.commission_percentage || 0)}%)
                     </span>
                   </div>
 
@@ -569,13 +569,27 @@ export default function PackagesPage() {
               />
             </Field>
 
-            <div className="flex justify-end gap-2 md:col-span-2 pt-2 border-t border-white/5">
-              <SecondaryButton type="button" onClick={() => setEditingPackage(null)}>
-                إلغاء
-              </SecondaryButton>
-              <PrimaryButton disabled={updatingPackage}>
-                {updatingPackage ? "جاري التحديث..." : "حفظ التعديلات"}
-              </PrimaryButton>
+            <div className="flex justify-between items-center md:col-span-2 pt-2 border-t border-white/5">
+              <button
+                type="button"
+                onClick={() => {
+                  const pkg = editingPackage;
+                  setEditingPackage(null);
+                  setPackageToDelete(pkg);
+                }}
+                className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-rose-500/20 bg-rose-500/10 px-3.5 text-xs font-bold text-rose-400 hover:bg-rose-500/20 transition"
+              >
+                <Trash2 size={14} />
+                <span>حذف هذه الباقة</span>
+              </button>
+              <div className="flex gap-2">
+                <SecondaryButton type="button" onClick={() => setEditingPackage(null)}>
+                  إلغاء
+                </SecondaryButton>
+                <PrimaryButton disabled={updatingPackage}>
+                  {updatingPackage ? "جاري التحديث..." : "حفظ التعديلات"}
+                </PrimaryButton>
+              </div>
             </div>
           </form>
         </Modal>

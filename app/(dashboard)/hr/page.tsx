@@ -422,6 +422,66 @@ export default function HRPage() {
     }
   };
 
+  // Delete Attendance
+  const handleDeleteAttendance = async (id: number) => {
+    if (!confirm("هل أنت متأكد من حذف سجل الحضور هذا؟")) return;
+    try {
+      await api(`/hr/attendance/${id}`, { method: "DELETE" });
+      setAttendances((prev) => prev.filter((a) => a.id !== id));
+      toast.success("تم حذف سجل الحضور");
+    } catch (e: any) {
+      toast.error(e?.message || "فشل حذف سجل الحضور");
+    }
+  };
+
+  // Delete Leave
+  const handleDeleteLeave = async (id: number) => {
+    if (!confirm("هل أنت متأكد من حذف طلب الإجازة هذا؟")) return;
+    try {
+      await api(`/hr/leaves/${id}`, { method: "DELETE" });
+      setLeaves((prev) => prev.filter((l) => l.id !== id));
+      toast.success("تم حذف طلب الإجازة");
+    } catch (e: any) {
+      toast.error(e?.message || "فشل حذف طلب الإجازة");
+    }
+  };
+
+  // Delete Payroll
+  const handleDeletePayroll = async (id: number) => {
+    if (!confirm("هل أنت متأكد من حذف مسير الراتب هذا؟")) return;
+    try {
+      await api(`/hr/payrolls/${id}`, { method: "DELETE" });
+      setPayrolls((prev) => prev.filter((p) => p.id !== id));
+      toast.success("تم حذف مسير الراتب");
+    } catch (e: any) {
+      toast.error(e?.message || "فشل حذف مسير الراتب");
+    }
+  };
+
+  // Delete Contract
+  const handleDeleteContract = async (id: number) => {
+    if (!confirm("هل أنت متأكد من حذف هذا العقد؟")) return;
+    try {
+      await api(`/hr/contracts/${id}`, { method: "DELETE" });
+      setContracts((prev) => prev.filter((c) => c.id !== id));
+      toast.success("تم حذف العقد");
+    } catch (e: any) {
+      toast.error(e?.message || "فشل حذف العقد");
+    }
+  };
+
+  // Delete Adjustment
+  const handleDeleteAdjustment = async (id: number) => {
+    if (!confirm("هل أنت متأكد من حذف هذه التسوية؟")) return;
+    try {
+      await api(`/hr/adjustments/${id}`, { method: "DELETE" });
+      setAdjustments((prev) => prev.filter((a) => a.id !== id));
+      toast.success("تم حذف التسوية");
+    } catch (e: any) {
+      toast.error(e?.message || "فشل حذف التسوية");
+    }
+  };
+
   // Export Attendance CSV Report
   const exportAttendanceCSV = () => {
     const headers = ["المعرف", "اسم الموظف", "البريد الإلكتروني", "الدور الوظيفي", "التاريخ", "وقت الحضور", "وقت الانصراف", "دقائق التأخير", "الحالة", "ملاحظات"];
@@ -818,12 +878,21 @@ export default function HRPage() {
                           {a.notes || "—"}
                         </td>
                         <td className="p-3.5 text-center">
-                          <button
-                            onClick={() => { setEditingAttendance(a); setManualAttendanceOpen(true); }}
-                            className="inline-flex items-center gap-1 rounded-lg bg-white/5 hover:bg-white/10 px-2.5 py-1 text-[10.5px] font-bold text-zinc-300 transition"
-                          >
-                            <span>تعديل</span>
-                          </button>
+                          <div className="flex items-center justify-center gap-1.5">
+                            <button
+                              onClick={() => { setEditingAttendance(a); setManualAttendanceOpen(true); }}
+                              className="inline-flex items-center gap-1 rounded-lg bg-white/5 hover:bg-white/10 px-2.5 py-1 text-[10.5px] font-bold text-zinc-300 transition"
+                            >
+                              <span>تعديل</span>
+                            </button>
+                            <button
+                              onClick={() => handleDeleteAttendance(a.id)}
+                              className="grid h-7 w-7 place-items-center rounded-lg text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 transition"
+                              title="حذف سجل الحضور"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -958,6 +1027,14 @@ export default function HRPage() {
                         </button>
                       </div>
                     )}
+
+                    <button
+                      onClick={() => handleDeleteLeave(l.id)}
+                      title="حذف طلب الإجازة"
+                      className="grid h-8 w-8 place-items-center rounded-xl text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 transition"
+                    >
+                      <Trash2 size={14} />
+                    </button>
                   </div>
                 </div>
               ))
@@ -1053,12 +1130,21 @@ export default function HRPage() {
                       </td>
                       <td className="p-3.5 font-mono text-[10px] text-zinc-400">{p.payment_reference || "—"}</td>
                       <td className="p-3.5 text-center">
-                        <button
-                          onClick={() => { setEditingPayroll(p); setPayrollModalOpen(true); }}
-                          className="inline-flex items-center gap-1 rounded-lg bg-white/5 hover:bg-white/10 px-2.5 py-1 text-[10.5px] font-bold text-zinc-300 transition"
-                        >
-                          <span>تعديل / صرف</span>
-                        </button>
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            onClick={() => { setEditingPayroll(p); setPayrollModalOpen(true); }}
+                            className="inline-flex items-center gap-1 rounded-lg bg-white/5 hover:bg-white/10 px-2.5 py-1 text-[10.5px] font-bold text-zinc-300 transition"
+                          >
+                            <span>تعديل / صرف</span>
+                          </button>
+                          <button
+                            onClick={() => handleDeletePayroll(p.id)}
+                            className="grid h-7 w-7 place-items-center rounded-lg text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 transition"
+                            title="حذف مسير الراتب"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -1108,12 +1194,13 @@ export default function HRPage() {
                   <th className="p-3.5">تاريخ الانتهاء</th>
                   <th className="p-3.5">الحالة</th>
                   <th className="p-3.5">ملاحظات</th>
+                  <th className="p-3.5 text-center">إجراءات</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
                 {filteredContracts.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="p-8 text-center text-xs text-zinc-500">
+                    <td colSpan={8} className="p-8 text-center text-xs text-zinc-500">
                       لا توجد عقود مسجلة.
                     </td>
                   </tr>
@@ -1144,6 +1231,15 @@ export default function HRPage() {
                       </td>
                       <td className="p-3.5 text-xs text-zinc-400 max-w-[200px] truncate" title={c.notes || ""}>
                         {c.notes || "—"}
+                      </td>
+                      <td className="p-3.5 text-center">
+                        <button
+                          onClick={() => handleDeleteContract(c.id)}
+                          className="grid h-7 w-7 place-items-center rounded-lg text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 transition mx-auto"
+                          title="حذف العقد"
+                        >
+                          <Trash2 size={13} />
+                        </button>
                       </td>
                     </tr>
                   ))
@@ -1220,12 +1316,13 @@ export default function HRPage() {
                       <th className="p-3.5">تاريخ التطبيق</th>
                       <th className="p-3.5">السبب والتفاصيل</th>
                       <th className="p-3.5">المسؤول</th>
+                      <th className="p-3.5 text-center">إجراءات</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
                     {filteredAdjustments.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="p-8 text-center text-xs text-zinc-500">
+                        <td colSpan={7} className="p-8 text-center text-xs text-zinc-500">
                           لا توجد تسويات مسجلة.
                         </td>
                       </tr>
@@ -1253,6 +1350,15 @@ export default function HRPage() {
                           <td className="p-3.5 text-xs text-zinc-300 font-mono">{a.effective_date}</td>
                           <td className="p-3.5 text-xs text-zinc-300">{a.reason}</td>
                           <td className="p-3.5 text-xs text-zinc-500">{a.creator?.name || "النظام"}</td>
+                          <td className="p-3.5 text-center">
+                            <button
+                              onClick={() => handleDeleteAdjustment(a.id)}
+                              className="grid h-7 w-7 place-items-center rounded-lg text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 transition mx-auto"
+                              title="حذف التسوية"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </td>
                         </tr>
                       ))
                     )}
@@ -1478,7 +1584,7 @@ export default function HRPage() {
 
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="الراتب الأساسي (EGP / $)">
-                <input name="base_salary" type="number" defaultValue={editingPayroll?.base_salary || 15000} className={inputClass} required />
+                <input name="base_salary" type="number" defaultValue={editingPayroll?.base_salary || 0} placeholder="0" className={inputClass} required />
               </Field>
               <Field label="المكافآت (+)">
                 <input name="bonuses" type="number" defaultValue={editingPayroll?.bonuses || 0} className={inputClass} />

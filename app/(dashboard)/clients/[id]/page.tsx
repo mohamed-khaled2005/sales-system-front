@@ -36,17 +36,19 @@ import {
   Send,
   Sparkles,
   StickyNote,
+  Trash2,
   UploadCloud,
   User as UserIcon,
   Wrench,
   X,
 } from "lucide-react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 export default function ClientProfilePage() {
+  const router = useRouter();
   const params = useParams<{ id: string }>();
   const fallback: Client = {
     id: Number(params.id) || 0,
@@ -248,6 +250,18 @@ export default function ClientProfilePage() {
     }
   }
 
+  // Handle Delete Client completely
+  async function handleDeleteClient() {
+    if (!confirm(`هل أنت متأكد من حذف العميل "${client.name}" وكافة بياناته نهائياً من السيستم؟`)) return;
+    try {
+      await api(`/clients/${client.id}`, { method: "DELETE" });
+      toast.success("تم حذف العميل بنجاح");
+      router.push("/clients");
+    } catch (err: any) {
+      toast.error(err?.message || "فشل حذف العميل من السيرفر");
+    }
+  }
+
   const sub = client.subscriptions?.[0];
 
   return (
@@ -285,7 +299,7 @@ export default function ClientProfilePage() {
               <StatusBadge status={client.status || "active"} />
             </div>
             <p className="text-xs text-zinc-400 mt-0.5">
-              {client.industry || "General Industry"} • إدارة الحساب: {client.accountManager?.name || "عمر خالد"}
+              {client.industry || "General Industry"} • إدارة الحساب: {client.accountManager?.name || "غير محدد"}
             </p>
           </div>
         </div>
@@ -321,6 +335,15 @@ export default function ClientProfilePage() {
           >
             <FileSpreadsheet size={13} className="text-[#facc15]" />
             <span>+ إنشاء Brief</span>
+          </button>
+
+          <button
+            onClick={handleDeleteClient}
+            className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3.5 text-xs font-medium text-rose-400 hover:bg-rose-500/20 transition"
+            title="حذف العميل نهائياً"
+          >
+            <Trash2 size={13} />
+            <span>حذف العميل</span>
           </button>
 
           <PrimaryButton onClick={() => setPublishApprovalOpen(true)} className="h-9 text-xs">
@@ -382,7 +405,7 @@ export default function ClientProfilePage() {
                   <h2 className="text-sm font-bold text-white tracking-wide">تفاصيل الباقة واستهلاك المحتوى</h2>
                 </div>
                 <span className="rounded-full bg-[#facc15]/15 px-3 py-1 text-xs font-black text-[#facc15]">
-                  {sub?.package.name ?? "Growth Retainer"}
+                  {sub?.package?.name ?? "بدون باقة"}
                 </span>
               </div>
 
@@ -391,21 +414,21 @@ export default function ClientProfilePage() {
                   <div>
                     <span className="text-[10px] text-zinc-500 block">قيمة العقد الشهري</span>
                     <strong className="text-lg font-black text-[#facc15] mt-0.5 block">
-                      {money(Number(sub?.package.monthly_price ?? 48000))}
+                      {sub ? money(Number(sub?.package?.monthly_price ?? 0)) : "0 ج.م"}
                     </strong>
                   </div>
                   <div className="text-left text-xs text-zinc-400">
-                    <div>تاريخ البدء: {sub?.starts_at || "2026-01-01"}</div>
-                    <div>تاريخ التجديد: {sub?.ends_at || "2026-12-31"}</div>
+                    <div>تاريخ البدء: {sub?.starts_at || "—"}</div>
+                    <div>تاريخ التجديد: {sub?.ends_at || "—"}</div>
                   </div>
                 </div>
               </div>
 
               <div className="grid grid-cols-3 gap-3 text-center">
                 {[
-                  { label: "Reels", used: sub?.reels_used ?? 3, total: sub?.package.reels ?? 8 },
-                  { label: "Posts", used: sub?.posts_used ?? 7, total: sub?.package.posts ?? 12 },
-                  { label: "Stories", used: sub?.stories_used ?? 14, total: sub?.package.stories ?? 24 },
+                  { label: "Reels", used: sub?.reels_used ?? 0, total: sub?.package?.reels ?? 0 },
+                  { label: "Posts", used: sub?.posts_used ?? 0, total: sub?.package?.posts ?? 0 },
+                  { label: "Stories", used: sub?.stories_used ?? 0, total: sub?.package?.stories ?? 0 },
                 ].map((item) => (
                   <div key={item.label} className="rounded-xl border border-white/5 bg-[#1a1a1c] p-3">
                     <strong className="block text-base font-black text-white">
@@ -415,7 +438,7 @@ export default function ClientProfilePage() {
                     <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/5">
                       <div
                         className="h-full rounded-full bg-[#facc15]"
-                        style={{ width: `${Math.min(100, (item.used / item.total) * 100)}%` }}
+                        style={{ width: `${item.total > 0 ? Math.min(100, (item.used / item.total) * 100) : 0}%` }}
                       />
                     </div>
                   </div>

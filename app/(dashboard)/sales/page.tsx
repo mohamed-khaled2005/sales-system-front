@@ -132,6 +132,18 @@ export default function SalesPage() {
     } catch {}
   }
 
+  // Delete Reminder
+  async function handleDeleteReminder(id: number) {
+    if (!confirm("هل أنت متأكد من حذف هذا التذكير؟")) return;
+    try {
+      await api(`/reminders/${id}`, { method: "DELETE" });
+      setReminders((prev) => prev.filter((r) => r.id !== id));
+      toast.success("تم حذف التذكير بنجاح");
+    } catch (err: any) {
+      toast.error(err?.message || "فشل حذف التذكير");
+    }
+  }
+
   // Negotiation Actions for Sales Leader
   async function handleNegotiationDecision(negId: number, decision: "approve" | "reject") {
     try {
@@ -265,7 +277,7 @@ export default function SalesPage() {
           <div className="flex items-center gap-2 rounded-xl bg-[#1c1c1f] px-3.5 py-1.5 text-xs text-zinc-300 border border-white/5">
             <Percent size={13} className="text-[#facc15]" />
             <span>نسبة عمولتي المعتمدة:</span>
-            <strong className="text-[#facc15] font-black">{user?.commission_percentage ?? 10}%</strong>
+            <strong className="text-[#facc15] font-black">{Number(user?.commission_percentage || 0)}%</strong>
           </div>
         )}
       </div>
@@ -473,11 +485,20 @@ export default function SalesPage() {
                     </div>
                   </div>
 
-                  <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${
-                    r.is_completed ? "bg-white/5 text-zinc-500" : "bg-[#facc15]/15 text-[#facc15]"
-                  }`}>
-                    {r.is_completed ? "مكتمل" : "مجدول"}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${
+                      r.is_completed ? "bg-white/5 text-zinc-500" : "bg-[#facc15]/15 text-[#facc15]"
+                    }`}>
+                      {r.is_completed ? "مكتمل" : "مجدول"}
+                    </span>
+                    <button
+                      onClick={() => handleDeleteReminder(r.id)}
+                      title="حذف التذكير"
+                      className="grid h-7 w-7 place-items-center rounded-lg text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 transition"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
                 </div>
               ))}
 
@@ -592,7 +613,7 @@ export default function SalesPage() {
                         {money(Number(employee.target ?? 0))}
                       </td>
                       <td className="py-3.5 text-center font-black text-white">
-                        {employee.commission_percentage ?? 10}%
+                        {Number(employee.commission_percentage || 0)}%
                       </td>
                       <td className="py-3.5 text-left">
                         {editingUserId === employee.id ? (
@@ -622,7 +643,7 @@ export default function SalesPage() {
                           <button
                             onClick={() => {
                               setEditingUserId(employee.id);
-                              setEditingPercentage(employee.commission_percentage ?? 10);
+                              setEditingPercentage(Number(employee.commission_percentage || 0));
                             }}
                             className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-[#1e1e22] px-3 py-1.5 text-[11px] font-bold text-zinc-300 hover:bg-white/5"
                           >
@@ -837,7 +858,7 @@ function NewLeadModal({
       phone: String(fd.get("phone") || ""),
       source: String(fd.get("source") || "Instagram"),
       temperature: (fd.get("temperature") as Lead["temperature"]) || "warm",
-      estimated_value: Number(fd.get("estimated_value") || 50000),
+      estimated_value: Number(fd.get("estimated_value") || 0),
       stage: "new",
       probability: 10,
       notes: fd.get("notes") ? String(fd.get("notes")) : undefined,
@@ -889,7 +910,7 @@ function NewLeadModal({
           </select>
         </Field>
         <Field label="القيمة المتوقعة ($)" className="md:col-span-2">
-          <input name="estimated_value" type="number" defaultValue={50000} className={inputClass} />
+          <input name="estimated_value" type="number" defaultValue={0} placeholder="0" className={inputClass} />
         </Field>
         <Field label="ملاحظات" className="md:col-span-2">
           <textarea name="notes" className={textareaClass} placeholder="تفاصيل المحادثة الأولى..." />

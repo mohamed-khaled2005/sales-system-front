@@ -393,6 +393,19 @@ export default function FinancePage() {
     }
   };
 
+  // Delete Salary/Payroll
+  const handleDeleteSalary = async (id: number) => {
+    if (!confirm("هل أنت متأكد من حذف مسير الراتب هذا؟")) return;
+    try {
+      await api(`/finance/salaries/${id}`, { method: "DELETE" });
+      setSalaries((prev) => prev.filter((s) => s.id !== id));
+      toast.success("تم حذف مسير الراتب بنجاح");
+      refreshData();
+    } catch (err: any) {
+      toast.error(err?.message || "فشل حذف مسير الراتب من السيرفر");
+    }
+  };
+
   // Export Financial CSV
   const exportFinanceCSV = () => {
     const headers = ["المعرف", "رقم الفاتورة", "العميل", "تاريخ الإصدار", "تاريخ الاستحقاق", "الإجمالي", "المدفوع", "المتبقي", "الحالة", "ملاحظات"];
@@ -433,11 +446,11 @@ export default function FinancePage() {
     const netProfit = Math.max(0, revenue - (totalExp + paidSalaries));
 
     return {
-      revenue: revenue || summaryData.total_revenue,
-      receivable: receivable || summaryData.accounts_receivable,
-      overdue: overdue || summaryData.overdue_amount,
-      expenses: totalExp || summaryData.total_expenses,
-      netProfit: netProfit || summaryData.net_profit,
+      revenue: invoices.length > 0 ? revenue : (Number(summaryData?.total_revenue) || 0),
+      receivable: invoices.length > 0 ? receivable : (Number(summaryData?.accounts_receivable) || 0),
+      overdue: invoices.length > 0 ? overdue : (Number(summaryData?.overdue_amount) || 0),
+      expenses: expenses.length > 0 ? totalExp : (Number(summaryData?.total_expenses) || 0),
+      netProfit: (invoices.length > 0 || expenses.length > 0) ? netProfit : (Number(summaryData?.net_profit) || 0),
     };
   }, [invoices, expenses, salaries, summaryData]);
 
@@ -1032,17 +1045,26 @@ export default function FinancePage() {
                       </td>
                       <td className="p-3.5 font-mono text-[10px] text-zinc-400">{sal.payment_reference || "—"}</td>
                       <td className="p-3.5 text-center">
-                        {sal.status !== "paid" ? (
+                        <div className="flex items-center justify-center gap-1.5">
+                          {sal.status !== "paid" ? (
+                            <button
+                              onClick={() => { setSelectedSalaryForPay(sal); setPayoutModalOpen(true); }}
+                              className="inline-flex items-center gap-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 px-3 py-1 text-xs font-black text-black transition active:scale-95"
+                            >
+                              <Banknote size={13} />
+                              <span>صرف الراتب</span>
+                            </button>
+                          ) : (
+                            <span className="text-[11px] text-emerald-400 font-bold">تم التحويل ✅</span>
+                          )}
                           <button
-                            onClick={() => { setSelectedSalaryForPay(sal); setPayoutModalOpen(true); }}
-                            className="inline-flex items-center gap-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 px-3 py-1 text-xs font-black text-black transition active:scale-95"
+                            onClick={() => handleDeleteSalary(sal.id)}
+                            className="grid h-7 w-7 place-items-center rounded-lg text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 transition"
+                            title="حذف مسير الراتب"
                           >
-                            <Banknote size={13} />
-                            <span>صرف الراتب</span>
+                            <Trash2 size={13} />
                           </button>
-                        ) : (
-                          <span className="text-[11px] text-emerald-400 font-bold">تم التحويل ✅</span>
-                        )}
+                        </div>
                       </td>
                     </tr>
                   ))

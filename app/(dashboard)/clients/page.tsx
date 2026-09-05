@@ -121,7 +121,7 @@ export default function ClientsPage() {
   );
 
   const activeCount = clients.filter((c) => c.status === "active").length;
-  const avgHealth = clients.length ? Math.round(clients.reduce((a, c) => a + Number(c.health_score || 85), 0) / clients.length) : 90;
+  const avgHealth = clients.length ? Math.round(clients.reduce((a, c) => a + Number(c.health_score || 0), 0) / clients.length) : 0;
 
   const metrics: Metric[] = [
     { key: "active", label: "العملاء النشطون", value: activeCount },
@@ -228,21 +228,21 @@ export default function ClientsPage() {
                 <div className="mt-5 flex items-center justify-between rounded-xl bg-[#1c1c1f] p-3">
                   <div>
                     <small className="text-[10px] text-zinc-500 block">الباقة الحالية</small>
-                    <strong className="text-xs text-zinc-200 mt-0.5 block">{sub?.package.name ?? "Growth"}</strong>
+                    <strong className="text-xs text-zinc-200 mt-0.5 block">{sub?.package?.name ?? "بدون باقة"}</strong>
                   </div>
                   <div className="text-left">
                     <small className="text-[10px] text-zinc-500 block">شهريًا</small>
                     <strong className="text-xs text-[#facc15] mt-0.5 block">
-                      {money(Number(sub?.package.monthly_price ?? 48000))}
+                      {sub ? money(Number(sub?.package?.monthly_price ?? 0)) : "0 ج.م"}
                     </strong>
                   </div>
                 </div>
 
                 <div className="mt-4 grid grid-cols-3 gap-2 text-center">
                   {[
-                    { l: "Reels", u: sub?.reels_used ?? 2, t: sub?.package.reels ?? 8 },
-                    { l: "Posts", u: sub?.posts_used ?? 6, t: sub?.package.posts ?? 12 },
-                    { l: "Stories", u: sub?.stories_used ?? 10, t: sub?.package.stories ?? 24 },
+                    { l: "Reels", u: sub?.reels_used ?? 0, t: sub?.package?.reels ?? 0 },
+                    { l: "Posts", u: sub?.posts_used ?? 0, t: sub?.package?.posts ?? 0 },
+                    { l: "Stories", u: sub?.stories_used ?? 0, t: sub?.package?.stories ?? 0 },
                   ].map((x) => (
                     <div key={x.l} className="rounded-lg border border-white/5 bg-[#1a1a1c] p-2">
                       <strong className="block text-xs font-bold text-white">
@@ -276,7 +276,7 @@ export default function ClientsPage() {
                   >
                     <Trash2 size={13} />
                   </button>
-                  <ProgressRing value={client.health_score || 90} size={36} strokeWidth={3} />
+                  <ProgressRing value={client.health_score ?? 100} size={36} strokeWidth={3} />
                   <ArrowLeft size={14} className="text-zinc-500 transition group-hover:-translate-x-1 group-hover:text-[#facc15]" />
                 </div>
               </div>

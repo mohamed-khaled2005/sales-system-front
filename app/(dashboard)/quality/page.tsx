@@ -803,7 +803,7 @@ export default function QualityPage() {
               </Field>
 
               <Field label="المهمة المقيمة">
-                <select name="task_id" defaultValue={editingReview?.task_id || (tasks[0]?.id ?? 101)} className={inputClass} required>
+                <select name="task_id" defaultValue={editingReview?.task_id || (tasks[0]?.id ?? "")} className={inputClass} required>
                   {tasks.length > 0 ? (
                     tasks.map((t) => (
                       <option key={t.id} value={t.id}>
