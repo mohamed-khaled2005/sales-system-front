@@ -53,6 +53,7 @@ import {
   Settings2,
   ShieldAlert,
   Sparkles,
+  Trash2,
   UserCheck,
   UserMinus,
   UserPlus,
